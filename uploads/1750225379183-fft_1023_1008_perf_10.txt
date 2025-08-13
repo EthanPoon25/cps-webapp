@@ -1,0 +1,167 @@
+# started on Tue Mar 18 20:04:42 2025
+
+#           time             counts unit events
+     0.010096286         45,406,174      instructions:u                                              
+     0.010096286              5,444      LLC-loads                                                   
+     0.010096286                 76      LLC-loads-misses          #    1.40% of all LL-cache hits   
+     0.020195846         54,520,472      instructions:u                                              
+     0.020195846                186      LLC-loads                                                   
+     0.020195846                  0      LLC-loads-misses          #    0.00% of all LL-cache hits   
+     0.030264938         54,064,980      instructions:u                                              
+     0.030264938                184      LLC-loads                                                   
+     0.030264938                  2      LLC-loads-misses          #    0.10% of all LL-cache hits   
+     0.040332711         41,405,060      instructions:u                                              
+     0.040332711                292      LLC-loads                                                   
+     0.040332711                109      LLC-loads-misses          #    7.14% of all LL-cache hits   
+     0.050399780         37,289,352      instructions:u                                              
+     0.050399780                 95      LLC-loads                                                   
+     0.050399780                  4      LLC-loads-misses          #    0.32% of all LL-cache hits   
+     0.060465535         35,530,056      instructions:u                                              
+     0.060465535                 98      LLC-loads                                                   
+     0.060465535                 11      LLC-loads-misses          #    1.05% of all LL-cache hits   
+     0.070530951         33,359,036      instructions:u                                              
+     0.070530951                 91      LLC-loads                                                   
+     0.070530951                  1      LLC-loads-misses          #    0.11% of all LL-cache hits   
+     0.080596532         32,413,977      instructions:u                                              
+     0.080596532                 81      LLC-loads                                                   
+     0.080596532                  4      LLC-loads-misses          #    0.49% of all LL-cache hits   
+     0.090661252         31,796,402      instructions:u                                              
+     0.090661252                 80      LLC-loads                                                   
+     0.090661252                  3      LLC-loads-misses          #    0.41% of all LL-cache hits   
+     0.100726386         31,328,199      instructions:u                                              
+     0.100726386                 74      LLC-loads                                                   
+     0.100726386                  6      LLC-loads-misses          #    0.91% of all LL-cache hits   
+     0.110791998         28,733,128      instructions:u                                              
+     0.110791998             39,307      LLC-loads                                                   
+     0.110791998             24,789      LLC-loads-misses          #  593.66% of all LL-cache hits   
+     0.120860042         20,355,961      instructions:u                                              
+     0.120860042            168,742      LLC-loads                                                   
+     0.120860042            122,468      LLC-loads-misses          #  684.58% of all LL-cache hits   
+     0.130928273         20,360,828      instructions:u                                              
+     0.130928273            168,834      LLC-loads                                                   
+     0.130928273            130,726      LLC-loads-misses          #  443.13% of all LL-cache hits   
+     0.140996346         17,570,431      instructions:u                                              
+     0.140996346            145,996      LLC-loads                                                   
+     0.140996346            113,935      LLC-loads-misses          #  301.24% of all LL-cache hits   
+     0.151067043         14,789,963      instructions:u                                              
+     0.151067043             77,861      LLC-loads                                                   
+     0.151067043             74,430      LLC-loads-misses          #  183.82% of all LL-cache hits   
+     0.161134224         15,280,186      instructions:u                                              
+     0.161134224             80,188      LLC-loads                                                   
+     0.161134224             77,833      LLC-loads-misses          #  181.12% of all LL-cache hits   
+     0.171200869         17,164,938      instructions:u                                              
+     0.171200869             89,850      LLC-loads                                                   
+     0.171200869             87,666      LLC-loads-misses          #  191.71% of all LL-cache hits   
+     0.181266812         41,065,856      instructions:u                                              
+     0.181266812             42,073      LLC-loads                                                   
+     0.181266812             31,309      LLC-loads-misses          #   68.77% of all LL-cache hits   
+     0.191332426         45,307,762      instructions:u                                              
+     0.191332426             30,551      LLC-loads                                                   
+     0.191332426             19,475      LLC-loads-misses          #   43.53% of all LL-cache hits   
+     0.201398096         44,878,240      instructions:u                                              
+     0.201398096             30,540      LLC-loads                                                   
+     0.201398096             20,855      LLC-loads-misses          #   47.37% of all LL-cache hits   
+     0.211463862         44,765,140      instructions:u                                              
+     0.211463862             30,058      LLC-loads                                                   
+     0.211463862             21,227      LLC-loads-misses          #   48.95% of all LL-cache hits   
+     0.221529253         44,837,165      instructions:u                                              
+     0.221529253             30,687      LLC-loads                                                   
+     0.221529253             21,292      LLC-loads-misses          #   49.76% of all LL-cache hits   
+     0.231594743         45,368,375      instructions:u                                              
+     0.231594743             30,959      LLC-loads                                                   
+     0.231594743             20,607      LLC-loads-misses          #   48.75% of all LL-cache hits   
+     0.241660096         44,941,903      instructions:u                                              
+     0.241660096             30,914      LLC-loads                                                   
+     0.241660096             22,063      LLC-loads-misses          #   52.78% of all LL-cache hits   
+     0.251725531         44,674,556      instructions:u                                              
+     0.251725531             30,488      LLC-loads                                                   
+     0.251725531             23,300      LLC-loads-misses          #   56.35% of all LL-cache hits   
+#           time             counts unit events
+     0.261791118         44,426,916      instructions:u                                              
+     0.261791118             30,711      LLC-loads                                                   
+     0.261791118             23,849      LLC-loads-misses          #   58.26% of all LL-cache hits   
+     0.271857428         44,787,388      instructions:u                                              
+     0.271857428             31,099      LLC-loads                                                   
+     0.271857428             22,501      LLC-loads-misses          #   55.46% of all LL-cache hits   
+     0.281927059         44,493,324      instructions:u                                              
+     0.281927059             30,923      LLC-loads                                                   
+     0.281927059             24,010      LLC-loads-misses          #   59.68% of all LL-cache hits   
+     0.291992959         44,100,253      instructions:u                                              
+     0.291992959             30,889      LLC-loads                                                   
+     0.291992959             25,149      LLC-loads-misses          #   63.02% of all LL-cache hits   
+     0.302058420         43,847,990      instructions:u                                              
+     0.302058420             30,571      LLC-loads                                                   
+     0.302058420             26,190      LLC-loads-misses          #   66.14% of all LL-cache hits   
+     0.312123835         44,368,750      instructions:u                                              
+     0.312123835             30,199      LLC-loads                                                   
+     0.312123835             24,376      LLC-loads-misses          #   62.04% of all LL-cache hits   
+     0.322189388         43,990,164      instructions:u                                              
+     0.322189388             30,173      LLC-loads                                                   
+     0.322189388             25,789      LLC-loads-misses          #   66.11% of all LL-cache hits   
+     0.332254865         43,836,807      instructions:u                                              
+     0.332254865             29,685      LLC-loads                                                   
+     0.332254865             26,615      LLC-loads-misses          #   68.73% of all LL-cache hits   
+     0.342320364         43,592,550      instructions:u                                              
+     0.342320364             29,747      LLC-loads                                                   
+     0.342320364             27,301      LLC-loads-misses          #   70.98% of all LL-cache hits   
+     0.352386321         31,544,749      instructions:u                                              
+     0.352386321             74,356      LLC-loads                                                   
+     0.352386321             53,611      LLC-loads-misses          #  135.77% of all LL-cache hits   
+     0.362452397         20,928,466      instructions:u                                              
+     0.362452397            109,489      LLC-loads                                                   
+     0.362452397             78,788      LLC-loads-misses          #  190.17% of all LL-cache hits   
+     0.372518596         23,174,841      instructions:u                                              
+     0.372518596             95,906      LLC-loads                                                   
+     0.372518596             77,815      LLC-loads-misses          #  181.37% of all LL-cache hits   
+     0.382584236         49,704,970      instructions:u                                              
+     0.382584236             18,756      LLC-loads                                                   
+     0.382584236              5,998      LLC-loads-misses          #   14.19% of all LL-cache hits   
+     0.392649942         49,903,221      instructions:u                                              
+     0.392649942             19,006      LLC-loads                                                   
+     0.392649942              5,640      LLC-loads-misses          #   13.53% of all LL-cache hits   
+     0.402715334         49,978,900      instructions:u                                              
+     0.402715334             18,702      LLC-loads                                                   
+     0.402715334              5,134      LLC-loads-misses          #   12.49% of all LL-cache hits   
+     0.412782457         49,972,195      instructions:u                                              
+     0.412782457             18,732      LLC-loads                                                   
+     0.412782457              5,177      LLC-loads-misses          #   12.77% of all LL-cache hits   
+     0.422848318         49,569,829      instructions:u                                              
+     0.422848318             18,802      LLC-loads                                                   
+     0.422848318              6,788      LLC-loads-misses          #   16.96% of all LL-cache hits   
+     0.432913724         49,512,833      instructions:u                                              
+     0.432913724             18,798      LLC-loads                                                   
+     0.432913724              7,219      LLC-loads-misses          #   18.26% of all LL-cache hits   
+     0.442979153         49,436,494      instructions:u                                              
+     0.442979153             18,819      LLC-loads                                                   
+     0.442979153              7,306      LLC-loads-misses          #   18.70% of all LL-cache hits   
+     0.453044534         49,579,877      instructions:u                                              
+     0.453044534             18,808      LLC-loads                                                   
+     0.453044534              6,771      LLC-loads-misses          #   17.53% of all LL-cache hits   
+     0.463109845         49,606,384      instructions:u                                              
+     0.463109845             18,470      LLC-loads                                                   
+     0.463109845              6,692      LLC-loads-misses          #   17.53% of all LL-cache hits   
+     0.473175108         49,465,784      instructions:u                                              
+     0.473175108             18,705      LLC-loads                                                   
+     0.473175108              6,610      LLC-loads-misses          #   17.50% of all LL-cache hits   
+     0.483240480         49,214,946      instructions:u                                              
+     0.483240480             18,485      LLC-loads                                                   
+     0.483240480              7,823      LLC-loads-misses          #   20.94% of all LL-cache hits   
+     0.493305920         49,094,855      instructions:u                                              
+     0.493305920             18,784      LLC-loads                                                   
+     0.493305920              8,615      LLC-loads-misses          #   23.29% of all LL-cache hits   
+     0.503371387         49,116,542      instructions:u                                              
+     0.503371387             18,536      LLC-loads                                                   
+     0.503371387              8,477      LLC-loads-misses          #   23.15% of all LL-cache hits   
+#           time             counts unit events
+     0.513425624         48,064,883      instructions:u                                              
+     0.513425624             21,703      LLC-loads                                                   
+     0.513425624             10,155      LLC-loads-misses          #   27.96% of all LL-cache hits   
+     0.523492482         23,304,897      instructions:u                                              
+     0.523492482            121,830      LLC-loads                                                   
+     0.523492482             44,842      LLC-loads-misses          #  118.10% of all LL-cache hits   
+     0.533558648         20,776,158      instructions:u                                              
+     0.533558648            108,560      LLC-loads                                                   
+     0.533558648             78,290      LLC-loads-misses          #  199.21% of all LL-cache hits   
+     0.540522283          5,624,275      instructions:u                                              
+     0.540522283             29,668      LLC-loads                                                   
+     0.540522283             26,499      LLC-loads-misses          #   67.73% of all LL-cache hits   
