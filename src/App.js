@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Upload, CheckCircle, FileText, Cpu, Database, Activity, ChevronRight, ChevronLeft, FolderOpen } from 'lucide-react';
 import JSZip from 'jszip';
 import {Settings, Trash2, Eye, EyeOff } from 'lucide-react';
-
+import { Zap } from 'lucide-react'; // or whichever library you’re using
 
 function App() {
   const [currentPage, setCurrentPage] = useState(0);
@@ -13,8 +13,6 @@ function App() {
   });
 
   const pages = [
-    { id: 'resources', title: 'Resource Types', component: ResourceTypesPage },
-    { id: 'files', title: 'Phase Detection', component: PhaseDetectionPage },
     { id: 'phase', title: 'Taskset Config', component: TasksetConfigurationPage },
     { id: 'taskset', title: 'Upload and Process Files', component: FileUploadPage },
     { id: 'generation', title: 'Taskset Generation', component: TasksetGenerationPage }
@@ -22,16 +20,12 @@ function App() {
 
   const canProceed = (pageIndex) => {
     switch (pageIndex) {
-      case 0: // Resource Types
-        return config.resourceTypes.length > 0;
+      case 0: // Algo
+        return config.algorithm?.type;
       case 1: // File Upload
-        return config.phaseDetection?.method;
+         return (config.tasks?.length ?? 0) > 0;;
       case 2: // Phase Detection
-        return config.algorithm?.type && config.tasksetConfig?.type;
-      case 3: // Taskset Configuration
-        return (config.tasks?.length ?? 0) > 0;
-      case 4:
-        return true
+        return config.algorithm;
       default:
         return false;
     }
@@ -224,8 +218,7 @@ function ResourceTypesPage({ config, updateConfig }) {
   const resourceTypeOptions = [
     { id: 'cache', label: 'Cache Memory', icon: Database, description: 'L1/L2/L3 cache analysis' },
     { id: 'memory', label: 'Memory Bandwidth', icon: Activity, description: 'RAM bandwidth utilization' },
-    { id: 'cpu', label: 'CPU Frequency', icon: Cpu, description: 'Processor frequency scaling' },
-  ];
+      ];
 
   const updateResourceType = (resourceId, checked) => {
     const newResourceTypes = checked 
@@ -246,10 +239,15 @@ function ResourceTypesPage({ config, updateConfig }) {
   };
 
   const updatePartitions = (resourceId, count) => {
-    updateConfig({
-      partitions: { ...config.partitions, [resourceId]: parseInt(count) || 1 }
-    });
-  };
+  updateConfig(prevConfig => ({
+    ...prevConfig, // keep other config fields
+    partitions: {
+      ...prevConfig.partitions, // keep other resources
+      [resourceId]: parseInt(count) || 1
+    }
+  }));
+};
+
 
   return (
     <div>
@@ -328,30 +326,7 @@ function ResourceTypesPage({ config, updateConfig }) {
                   {isSelected && (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {/* Partitions input */}
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <label style={{
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#374151',
-                        marginRight: '12px'
-                      }}>
-                        Minimum number of partitions:
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="32"
-                        value={config.partitions[resource.id] || 4}
-                        onChange={(e) => updatePartitions(resource.id, e.target.value)}
-                        style={{
-                          width: '80px',
-                          padding: '4px 12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
+{/* Cache partitions input */}
 {resource.id === 'cache' && (
   <div style={{ marginTop: '12px' }}>
     <label style={{
@@ -366,63 +341,39 @@ function ResourceTypesPage({ config, updateConfig }) {
       type="number"
       min="1"
       max="20"
-      value={config.memoryBandwidth || 1}
+      value={config.partitions || 1}
       onChange={(e) => {
         let val = parseInt(e.target.value);
         if (isNaN(val)) val = 1;
         if (val > 20) val = 20;
         if (val < 1) val = 1;
-        updateConfig({ ...config, memoryBandwidth: val });
+        
+        console.log('Sending value to backend:', val); // Add this
+        
+        updateConfig({ ...config, partitions: val });
+        
+        fetch('/update-partitions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({partitions: val })
+        })
+        .then(response => response.json())
+        .then(data => console.log('Backend response:', data))
+        .catch(error => console.error('Fetch error:', error));
       }}
-      style={{
-        width: '80px',
-        padding: '4px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: '6px',
-        fontSize: '14px'
-      }}
-    />
-  </div>
-)}
+            style={{
+              width: '80px',
+              padding: '4px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px'
+            }}
+          />
+        </div>
+      )}
 
-                    {/* CPU Frequency input */}
-                    {resource.id === 'cpu' && (
-  <div style={{ marginTop: '12px' }}>
-    <label style={{
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#374151',
-      marginRight: '12px'
-    }}>
-      CPU Frequency (GHz) (1.3 GHz - 2.3 Ghz):
-    </label>
-    <input
-      type="number"
-      min="1.3"
-      max="2.3"
-      step="0.1"
-      value={config.cpuFrequency || 1.3}
-      onChange={(e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) val = 1.3;
-        if (val > 2.3) val = 2.3;
-        if (val < 1.3) val = 1.3;
-        updateConfig({ ...config, cpuFrequency: val });
-      }}
-      style={{
-        width: '100px',
-        padding: '4px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: '6px',
-        fontSize: '14px'
-      }}
-    />
-  </div>
-)}
-
-
-                    {/* Memory Bandwidth input */}
-                   {resource.id === 'memory' && (
+{/* Memory Bandwidth input */}
+{resource.id === 'memory' && (
   <div style={{ marginTop: '12px' }}>
     <label style={{
       fontSize: '14px',
@@ -437,12 +388,34 @@ function ResourceTypesPage({ config, updateConfig }) {
       min="1"
       max="20"
       value={config.memoryBandwidth || 1}
-      onChange={(e) => {
+      onChange={async (e) => {
         let val = parseInt(e.target.value);
         if (isNaN(val)) val = 1;
         if (val > 20) val = 20;
         if (val < 1) val = 1;
+        
+        // Update local state first
         updateConfig({ ...config, memoryBandwidth: val });
+        
+        try {
+          const response = await fetch('/update-bw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memoryBandwidth: val })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Failed to update memory bandwidth:', errorData.error);
+            // Optionally show user feedback here
+          } else {
+            const successData = await response.json();
+            console.log('Memory bandwidth updated successfully:', successData);
+          }
+        } catch (error) {
+          console.error('Network error updating memory bandwidth:', error);
+          // Optionally revert local state or show error to user
+        }
       }}
       style={{
         width: '80px',
@@ -500,35 +473,13 @@ function TasksetConfigurationPage({ config, updateConfig }) {
       id: 'dna',
       label: 'DNA (Dynamic Resource Allocation)',
       description: 'Phase‑aware scheduler for soft real‑time multicore systems',
-      parameters: {
-        populationSize: 100,
-        generations: 500,
-        mutationRate: 0.1,
-        crossoverRate: 0.8
-      }
+    
     },
     {
-      id: 'simulated_annealing',
-      label: 'Simulated Annealing',
+      id: 'rasco',
+      label: 'Rasco (Resource Allocation and Scheduling Co-design)',
       description: 'Temperature-based optimization for global minimum search',
-      parameters: {
-        initialTemp: 1000,
-        coolingRate: 0.95,
-        minTemp: 0.01,
-        iterations: 1000
-      }
-    },
-    {
-      id: 'particle_swarm',
-      label: 'Particle Swarm Optimization',
-      description: 'Swarm intelligence for distributed task optimization',
-      parameters: {
-        swarmSize: 50,
-        iterations: 300,
-        inertiaWeight: 0.9,
-        cognitive: 2.0,
-        social: 2.0
-      }
+      
     }
   ];
 
@@ -680,211 +631,7 @@ function TasksetConfigurationPage({ config, updateConfig }) {
         </div>
       </div>
 
-      {/* Taskset Configuration */}
-      <div>
-        <h3 style={{
-          fontSize: '20px',
-          fontWeight: '600',
-          color: '#111827',
-          marginBottom: '16px'
-        }}>
-          Taskset Parameters
-        </h3>
-        
-        <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
-          {tasksetConfigs.map((tasksetConfig) => {
-            const isSelected = selectedTaskset === tasksetConfig.id;
-            
-            return (
-              <div key={tasksetConfig.id} style={{
-                border: '2px solid',
-                borderColor: isSelected ? '#3b82f6' : '#e5e7eb',
-                borderRadius: '8px',
-                padding: '20px',
-                transition: 'all 0.2s',
-                backgroundColor: isSelected ? '#eff6ff' : 'white',
-                cursor: 'pointer'
-              }}
-              onClick={() => updateTasksetConfig(tasksetConfig.id)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <input
-                      type="radio"
-                      checked={isSelected}
-                      onChange={() => updateTasksetConfig(tasksetConfig.id)}
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        accentColor: '#2563eb',
-                        marginRight: '16px'
-                      }}
-                    />
-                    <div>
-                      <h4 style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: '#111827',
-                        marginBottom: '4px'
-                      }}>
-                        {tasksetConfig.label}
-                      </h4>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#6b7280'
-                      }}>
-                        Tasks: {tasksetConfig.tasks} | Utilization: {tasksetConfig.utilization}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {isSelected && tasksetConfig.id === 'custom' && (
-                  <div style={{
-                    marginTop: '20px',
-                    backgroundColor: '#f8fafc',
-                    padding: '16px',
-                    borderRadius: '6px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '16px' 
-                    }}>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#374151',
-                          display: 'block',
-                          marginBottom: '4px'
-                        }}>
-                          Min Tasks
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={config.tasksetConfig?.customParams?.minTasks || 10}
-                          onChange={(e) => updateCustomParam('minTasks', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#374151',
-                          display: 'block',
-                          marginBottom: '4px'
-                        }}>
-                          Max Tasks
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={config.tasksetConfig?.customParams?.maxTasks || 100}
-                          onChange={(e) => updateCustomParam('maxTasks', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#374151',
-                          display: 'block',
-                          marginBottom: '4px'
-                        }}>
-                          Min Utilization
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          value={config.tasksetConfig?.customParams?.minUtilization || 0.4}
-                          onChange={(e) => updateCustomParam('minUtilization', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#374151',
-                          display: 'block',
-                          marginBottom: '4px'
-                        }}>
-                          Max Utilization
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="1"
-                          value={config.tasksetConfig?.customParams?.maxUtilization || 0.9}
-                          onChange={(e) => updateCustomParam('maxUtilization', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#374151',
-                          display: 'block',
-                          marginBottom: '4px'
-                        }}>
-                          Priority Levels
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="20"
-                          value={config.tasksetConfig?.customParams?.priorityLevels || 5}
-                          onChange={(e) => updateCustomParam('priorityLevels', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            fontSize: '14px'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      
 
       {(selectedAlgorithm && selectedTaskset) && (
         <div style={{
@@ -1983,7 +1730,6 @@ const processBatchTasks = async () => {
     </div>
   );
 }
-
 // Page 5: Taskset Generation Parameters
 function TasksetGenerationPage({ config, updateConfig }) {
   const [targetUtil, setTargetUtil] = useState(config.tasksetGeneration?.targetUtil || 0.8);
@@ -1991,6 +1737,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
   const [maxUtil, setMaxUtil] = useState(config.tasksetGeneration?.maxUtil || 0.3);
   const [numCores, setNumCores] = useState(config.tasksetGeneration?.numCores || 4);
   const [maxPart, setMaxPart] = useState(config.tasksetGeneration?.maxPart || 8);
+  const [maxBandwidth, setMaxBandwidth] = useState(config.tasksetGeneration?.maxBandwidth || 1000); // Default 1000 MB/s
   const [isValid, setIsValid] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationResult, setGenerationResult] = useState(null);
@@ -2004,7 +1751,8 @@ function TasksetGenerationPage({ config, updateConfig }) {
       maxUtil > 0 && maxUtil <= 1 &&
       minUtil < maxUtil &&
       numCores > 0 && numCores <= 64 &&
-      maxPart > 0 && maxPart <= 32;
+      maxPart > 0 && maxPart <= 32 &&
+      maxBandwidth > 0 && maxBandwidth <= 10000; // Max 10 GB/s
     
     setIsValid(valid);
     return valid;
@@ -2020,11 +1768,12 @@ function TasksetGenerationPage({ config, updateConfig }) {
           minUtil,
           maxUtil,
           numCores: parseInt(numCores),
-          maxPart: parseInt(maxPart)
+          maxPart: parseInt(maxPart),
+          maxBandwidth: parseFloat(maxBandwidth)
         }
       });
     }
-  }, [targetUtil, minUtil, maxUtil, numCores, maxPart]);
+  }, [targetUtil, minUtil, maxUtil, numCores, maxPart, maxBandwidth]);
 
   const handleTargetUtilChange = (e) => {
     const value = parseFloat(e.target.value);
@@ -2061,6 +1810,13 @@ function TasksetGenerationPage({ config, updateConfig }) {
     }
   };
 
+  const handleMaxBandwidthChange = (e) => {
+    const value = parseFloat(e.target.value);
+    if (!isNaN(value) && value > 0 && value <= 10000) {
+      setMaxBandwidth(value);
+    }
+  };
+
   const getValidationMessage = () => {
     if (targetUtil <= 0 || targetUtil > 1) return "Target utilization must be between 0 and 1";
     if (minUtil <= 0 || minUtil > 1) return "Minimum utilization must be between 0 and 1";
@@ -2068,6 +1824,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
     if (minUtil >= maxUtil) return "Minimum utilization must be less than maximum utilization";
     if (numCores <= 0 || numCores > 64) return "Number of cores must be between 1 and 64";
     if (maxPart <= 0 || maxPart > 32) return "Maximum partitions must be between 1 and 32";
+    if (maxBandwidth <= 0 || maxBandwidth > 10000) return "Maximum bandwidth must be between 1 and 10000 MB/s";
     return "";
   };
 
@@ -2092,6 +1849,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
         maxWithin: maxUtil,
         cores: numCores,
         maxPart: maxPart,
+        maxBandwidth: maxBandwidth,
         taskName: taskName,
         exportFormat: ['csv', 'txt'] // Export both formats
       };
@@ -2383,7 +2141,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
           </p>
         </div>
 
-        {/* Maximum Partitions */}
+        {/* Maximum Cache Partitions */}
         <div style={{
           backgroundColor: '#f8fafc',
           padding: '24px',
@@ -2399,7 +2157,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
             alignItems: 'center'
           }}>
             <Settings style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
-            Maximum Partitions
+            Maximum Cache Partitions
           </h3>
           <div style={{ marginBottom: '12px' }}>
             <label style={{
@@ -2409,7 +2167,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
               display: 'block',
               marginBottom: '8px'
             }}>
-              Max Cache/Memory Partitions (1-32)
+              Max Cache Partitions (1-32)
             </label>
             <input
               type="number"
@@ -2432,7 +2190,61 @@ function TasksetGenerationPage({ config, updateConfig }) {
             color: '#6b7280',
             fontStyle: 'italic'
           }}>
-            Maximum number of cache/memory bandwidth partitions available
+            Maximum number of cache partitions available for task isolation
+          </p>
+        </div>
+
+        {/* Maximum Bandwidth */}
+        <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '24px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Zap style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
+            Maximum Memory Bandwidth
+          </h3>
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151',
+              display: 'block',
+              marginBottom: '8px'
+            }}>
+              Max Bandwidth (MB/s, 1-10000)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="10000"
+              step="10"
+              value={maxBandwidth}
+              onChange={handleMaxBandwidthChange}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '16px',
+                backgroundColor: 'white'
+              }}
+            />
+          </div>
+          <p style={{
+            fontSize: '13px',
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            Maximum memory bandwidth available for task allocation (in MB/s)
           </p>
         </div>
       </div>
@@ -2475,6 +2287,10 @@ function TasksetGenerationPage({ config, updateConfig }) {
           <div>
             <span style={{ fontWeight: '500', color: '#374151' }}>Max Partitions:</span>
             <span style={{ marginLeft: '8px', color: '#6b7280' }}>{maxPart}</span>
+          </div>
+          <div>
+            <span style={{ fontWeight: '500', color: '#374151' }}>Max Bandwidth:</span>
+            <span style={{ marginLeft: '8px', color: '#6b7280' }}>{maxBandwidth} MB/s</span>
           </div>
         </div>
       </div>
@@ -2607,12 +2423,6 @@ function TasksetGenerationPage({ config, updateConfig }) {
                 {(generationResult.targetUtilization * 100).toFixed(2)}%
               </span>
             </div>
-            <div>
-              <span style={{ fontWeight: '500', color: '#374151' }}>Utilization Error:</span>
-              <span style={{ marginLeft: '8px', color: '#6b7280' }}>
-                {(generationResult.utilizationError * 100).toFixed(4)}%
-              </span>
-            </div>
           </div>
           
           {/* Download buttons for additional files */}
@@ -2687,7 +2497,5 @@ function TasksetGenerationPage({ config, updateConfig }) {
     </div>
   );
 }
-
-
 
 export default App;

@@ -110,7 +110,7 @@ async function processUploadedFilesOptimized(files, taskName) {
 }
 
 // Fixed generateTaskSet function - REMOVE task name addition logic here
-function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, currentTaskName) {
+function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBand, currentTaskName) {
   const tasks = [];
   
   // Get available task names (don't add the current one here)
@@ -130,6 +130,11 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, curre
   const max = parseFloat(maxWithin);
   const numCores = parseInt(cores);
   const maxPartitions = parseInt(maxPart);
+  const maxBandwidth = parseInt(maxBand);
+  const wcetfile=maxPartitions/numCores;
+  const wcetbw=maxBandwidth*72
+  const wcetpart=maxPartitions**2 -1
+
   
   target = numCores * target;
   let remainingUtil = target;
@@ -154,7 +159,12 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, curre
     
     const fs = require('fs');
     let wcet;
-    const filenameout = path.join("output-phases", selectedTaskName, "15_360", "wcet.txt");
+    const filenameOut = path.join(
+      "output-phases",
+      selectedTaskName,
+      `${wcetbw}_${wcetpart}`, // convert numbers to string using template literal
+      "wcet.txt"
+    );
     
     // Check if the wcet.txt file exists for the selected task
     if (!fs.existsSync(filenameout)) {
@@ -222,6 +232,50 @@ app.post('/api/add-task-name', (req, res) => {
     taskNames: getAvailableTaskNames()
   });
 });
+
+let memoryBandwidth = 1;
+let cpuFreq = 1.3;
+
+// Update partitions / memory bandwidth
+app.post('/update-partitions', (req, res) => {
+  const { partitions: val } = req.body; // value sent from frontend
+  if (typeof val === 'number' && val >= 1 && val <= 20) {
+    partitionsConfig.cache = val; // or update dynamically with resourceId if you send it
+    console.log('Partitions updated to:', partitionsConfig);
+    res.status(200).send({ success: true });
+  } else {
+    console.log('Invalid partitions value:', val);
+    res.status(400).send({ error: 'Invalid value' });
+  }
+});
+
+
+// Get partitions / memory bandwidth
+app.get('/get-partitions', (req, res) => {
+  res.send({ partitions: partitionsConfig });
+});
+
+
+// Update CPU frequency
+app.post('/update-bw', (req, res) => {
+  const { memoryBandwidth: val } = req.body;
+  if (typeof val === 'number' && val >= 1 && val <= 20) {
+    memoryBandwidth = val;
+    console.log('Memory bandwidth updated to:', memoryBandwidth);
+    res.status(200).send({ success: true });
+  } else {
+    console.log('Invalid memoryBandwidth value:', val);
+    res.status(400).send({ error: 'Invalid value' });
+  }
+});
+
+
+// Get CPU frequency
+app.get('/get-bw', (req, res) => {
+  res.send({ memoryBandwidth });
+});
+
+
 
 // Modified task generation endpoint - pass currentTaskName but don't add it to the array
 app.post('/api/generate-tasks', (req, res) => {
@@ -311,7 +365,8 @@ app.post('/api/generate-tasks', (req, res) => {
         id: task.id,
         name: task.name,
         utilization: parseFloat(task.utilization.toFixed(6)),
-        period: parseFloat(task.period.toFixed(6))
+        period: parseFloat(task.period.toFixed(6)),
+        wcet: parseFloat(task.wcet.toFixed(6))
       }))
     });
     
@@ -583,7 +638,7 @@ app.post('/api/generate-tasks', (req, res) => {
         name: task.name,
         utilization: parseFloat(task.utilization.toFixed(6)),
         period: parseFloat(task.period.toFixed(6)),
-        wcet: task.wcet
+        wcet: tparseFloat(task.wcet.toFixed(6)),
       }))
     });
     
