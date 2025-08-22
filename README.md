@@ -102,7 +102,7 @@ Clone the repository and install dependencies:
 4. npm install react@19.1.0 react-dom@19.1.0 react-scripts@5.0.1 --save
 5. npm start (to run the application)
 6. npm run dev in a seperate command line (to run the backend)
-
+'''
 ---
 
 ## Technologies Used
