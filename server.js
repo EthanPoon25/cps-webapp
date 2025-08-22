@@ -14,7 +14,7 @@ const app = express();
 const port = 3001;
 let compiledExecutablePath = null;
 let minPartnum = 1;    // default values
-let maxPartNum = 21;
+let maxPartnum = 21;
 let minBandnum = 1;
 let maxBandnum = 21;
 
@@ -300,17 +300,17 @@ app.post('/api/send-data', (req, res) => {
 
   // Update the global variables (these are declared at the top of your file)
   if (minPart !== undefined) minPartnum = parseInt(minPart);
-  if (maxPart !== undefined) maxPartNum = parseInt(maxPart);
+  if (maxPart !== undefined) maxPartnum = parseInt(maxPart);
   if (minBandwidth !== undefined) minBandnum = parseInt(minBandwidth);
   if (maxBandwidth !== undefined) maxBandnum = parseInt(maxBandwidth);
 
-  console.log('Updated global variables:', { minPartnum, maxPartNum, minBandnum, maxBandnum });
+  console.log('Updated global variables:', { minPartnum, maxPartnum, minBandnum, maxBandnum });
 
   // Respond with confirmation
   res.json({ 
     message: 'Data received and updated successfully', 
     received: { minPart, maxPart, minBandwidth, maxBandwidth },
-    updated: { minPartnum, maxPartNum, minBandnum, maxBandnum }
+    updated: { minPartnum, maxPartnum, minBandnum, maxBandnum }
   });
 });
 
@@ -373,10 +373,10 @@ app.post('/api/generate-tasks', (req, res) => {
     const minWithinNum = parseFloat(minWithin);
     const maxWithinNum = parseFloat(maxWithin);
     const coresNum = parseInt(cores);
-    const maxPartNum = parseInt(maxPart);
+    const maxPartnum = parseInt(maxPart);
     
     if (isNaN(targetUtilNum) || isNaN(minWithinNum) || isNaN(maxWithinNum) || 
-        isNaN(coresNum) || isNaN(maxPartNum)) {
+        isNaN(coresNum) || isNaN(maxPartnum)) {
       return res.status(400).json({ 
         success: false, 
         error: 'All parameters must be valid numbers'
@@ -850,10 +850,10 @@ app.post('/api/generate-tasks', (req, res) => {
     const minWithinNum = parseFloat(minWithin);
     const maxWithinNum = parseFloat(maxWithin);
     const coresNum = parseInt(cores);
-    const maxPartNum = parseInt(maxPart);
+    const maxPartnum = parseInt(maxPart);
     
     if (isNaN(targetUtilNum) || isNaN(minWithinNum) || isNaN(maxWithinNum) || 
-        isNaN(coresNum) || isNaN(maxPartNum)) {
+        isNaN(coresNum) || isNaN(maxPartnum)) {
       return res.status(400).json({ 
         success: false, 
         error: 'All parameters must be valid numbers'
@@ -1001,7 +1001,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
   }
 
   console.log('=== PROCESSING STARTED ===');
-  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}, MinPart: ${minPartnum}, MaxPart: ${maxPartNum}, MinBand: ${minBandnum}, MaxBand: ${maxBandnum}`);
+  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}, MinPart: ${minPartnum}, MaxPart: ${maxPartnum}, MinBand: ${minBandnum}, MaxBand: ${maxBandnum}`);
 
   try {
     // Step 1: Process files
@@ -1013,7 +1013,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
     // Step 2: Python clustering
     console.log('Step 2: Running Python clustering...');
     
-    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig || 5} --minpart ${minPartnum} --maxpart ${maxPartNum} --minBand ${minBandnum} --maxBand ${maxBandnum} --scan-input`;
+    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig} --minpart ${minPartnum} --maxpart ${maxPartnum} --minBand ${minBandnum } --maxBand ${maxBandnum} --scan-input`;
     
     const { stdout, stderr } = await execAsync(pythonCommand, {
       maxBuffer: 1024 * 1024 * 10 // Increased buffer size to 10MB

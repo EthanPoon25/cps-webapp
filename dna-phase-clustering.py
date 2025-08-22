@@ -369,7 +369,7 @@ def parse_arguments():
     
     return parser.parse_args()
 
-def run_dna_analysis(task, input_dir, output_dir, num_clusters, num_per_config=5, minpart,maxpart,minband,maxbandscan_input=False):
+def run_dna_analysis(task, input_dir, output_dir, num_clusters, num_per_config, minpart,maxpart,minband,maxbandscan_input=False):
     main(task, input_dir, output_dir, num_clusters, num_per_config, minpart,maxpart,minband,maxband,scan_input)
     print(num_clusters,num_per_config)
 

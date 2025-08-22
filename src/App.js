@@ -259,7 +259,7 @@ function ResourceTypesPage({ config, updateConfig }) {
   const handleMaxPartChange = (e) => {
     let val = parseInt(e.target.value);
     if (isNaN(val)) val = 1;
-    if (val > 32) val = 32;
+    if (val > 21) val = 21;
     if (val < 1) val = 1;
     
     // Ensure max is not less than min
@@ -284,11 +284,11 @@ function ResourceTypesPage({ config, updateConfig }) {
   const handleMinPartChange = (e) => {
     let val = parseInt(e.target.value);
     if (isNaN(val)) val = 1;
-    if (val > 32) val = 32;
+    if (val > 21) val = 21;
     if (val < 1) val = 1;
     
     // Ensure min is not greater than max
-    const currentMax = config.maxPart || 32;
+    const currentMax = config.maxPart || 21;
     if (val > currentMax) {
       val = currentMax;
     }
@@ -309,7 +309,7 @@ function ResourceTypesPage({ config, updateConfig }) {
   const handleMaxBandwidthChange = (e) => {
     let val = parseInt(e.target.value);
     if (isNaN(val)) val = 1;
-    if (val > 10000) val = 10000;
+    if (val > 21) val = 21;
     if (val < 1) val = 1;
     
     // Ensure max is not less than min
@@ -338,7 +338,7 @@ function ResourceTypesPage({ config, updateConfig }) {
     if (val < 1) val = 1;
     
     // Ensure min is not greater than max
-    const currentMax = config.maxBandwidth || 10000;
+    const currentMax = config.maxBandwidth || 21;
     if (val > currentMax) {
       val = currentMax;
     }
@@ -541,8 +541,8 @@ function ResourceTypesPage({ config, updateConfig }) {
               <input
                 type="number"
                 min="1"
-                max="10000"
-                step="10"
+                max="21"
+                step="1"
                 value={config.minBandwidth || 1}
                 onChange={handleMinBandwidthChange}
                 style={{
@@ -569,8 +569,8 @@ function ResourceTypesPage({ config, updateConfig }) {
               <input
                 type="number"
                 min="1"
-                max="10000"
-                step="10"
+                max="21"
+                step="1"
                 value={config.maxBandwidth || 1}
                 onChange={handleMaxBandwidthChange}
                 style={{
@@ -590,7 +590,7 @@ function ResourceTypesPage({ config, updateConfig }) {
             color: '#6b7280',
             fontStyle: 'italic'
           }}>
-            Range: {config.minBandwidth || 1} - {config.maxBandwidth || 1} MB/s memory bandwidth available for task allocation
+            Range: {config.minBandwidth || 1} - {config.maxBandwidth || 1} partitions memory bandwidth available for task allocation
           </p>
         </div>
       </div>
@@ -1863,8 +1863,8 @@ function TasksetGenerationPage({ config, updateConfig }) {
   const [minUtil, setMinUtil] = useState(config.tasksetGeneration?.minUtil || 0.1);
   const [maxUtil, setMaxUtil] = useState(config.tasksetGeneration?.maxUtil || 0.3);
   const [numCores, setNumCores] = useState(config.tasksetGeneration?.numCores || 4);
-  const [maxPart, setMaxPart] = useState(config.tasksetGeneration?.maxPart || 8);
-  const [maxBandwidth, setMaxBandwidth] = useState(config.tasksetGeneration?.maxBandwidth || 1000); // Default 1000 MB/s
+  const [maxPart, setMaxPart] = useState(config.tasksetGeneration?.maxPart || 21);
+  const [maxBandwidth, setMaxBandwidth] = useState(config.tasksetGeneration?.maxBandwidth || 21); // Default 1000 MB/s
   const [isValid, setIsValid] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationResult, setGenerationResult] = useState(null);

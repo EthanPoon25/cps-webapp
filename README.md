@@ -102,8 +102,8 @@ npm install
 npm install react@19.1.0 react-dom@19.1.0 react-scripts@5.0.1 --save
 
 ``````
-#### Run npm start (to run the application frontend)
-#### Run npm run dev in a seperate command line (to run the backend)
+#### Run npm run dev on your command line (to run the backend first)
+#### Run npm start (to run the application frontend and allow the front end to run on a different port)
 
 ---
 
