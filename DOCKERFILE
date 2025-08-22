@@ -1,0 +1,41 @@
+FROM node:18-bullseye
+
+# Install Python and build tools
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    build-essential \
+    gcc \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip3 install numpy pandas scikit-learn matplotlib seaborn
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm install
+
+# Copy application files
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p uploads results temp input-data output-phases
+
+# Compile C code
+RUN cd calculate-thetas && make && cd ..
+
+# Create non-root user
+RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 3001
+
+# Start the application
+CMD ["npm", "start"]
