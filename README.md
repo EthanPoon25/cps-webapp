@@ -96,13 +96,15 @@ Before running the CPS Web App, ensure you have the following installed:
 Clone the repository and install dependencies:
 
 ```bash
-1. git clone https://github.com/EthanPoon25/cps-webapp.git
-2. cd cps-webapp
-3. npm install
-4. npm install react@19.1.0 react-dom@19.1.0 react-scripts@5.0.1 --save
-5. npm start (to run the application)
-6. npm run dev in a seperate command line (to run the backend)
-'''
+git clone https://github.com/EthanPoon25/cps-webapp.git
+cd cps-webapp
+npm install
+npm install react@19.1.0 react-dom@19.1.0 react-scripts@5.0.1 --save
+
+``````
+#### Run npm start (to run the application frontend)
+#### Run npm run dev in a seperate command line (to run the backend)
+
 ---
 
 ## Technologies Used

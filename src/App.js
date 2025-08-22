@@ -366,7 +366,7 @@ function ResourceTypesPage({ config, updateConfig }) {
       maxBandwidth: config.maxBandwidth,
       
     };
-  fetch('http://localhost:5000/api/send-data', {   // point to your backend
+  fetch('http://localhost:3001/api/send-data', {   // point to your backend
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -452,7 +452,7 @@ function ResourceTypesPage({ config, updateConfig }) {
               <input
                 type="number"
                 min="1"
-                max="32"
+                max="21"
                 value={config.minPart || 1}
                 onChange={handleMinPartChange}
                 style={{
@@ -479,7 +479,7 @@ function ResourceTypesPage({ config, updateConfig }) {
               <input
                 type="number"
                 min="1"
-                max="32"
+                max="21"
                 value={config.maxPart || 1}
                 onChange={handleMaxPartChange}
                 style={{
@@ -1878,8 +1878,8 @@ function TasksetGenerationPage({ config, updateConfig }) {
       maxUtil > 0 && maxUtil <= 1 &&
       minUtil < maxUtil &&
       numCores > 0 && numCores <= 64 &&
-      maxPart > 0 && maxPart <= 32 &&
-      maxBandwidth > 0 && maxBandwidth <= 10000; // Max 10 GB/s
+      maxPart > 0 && maxPart <= 21 &&
+      maxBandwidth > 0 && maxBandwidth <= 21; // Max 10 GB/s
     
     setIsValid(valid);
     return valid;
@@ -1895,12 +1895,10 @@ function TasksetGenerationPage({ config, updateConfig }) {
           minUtil,
           maxUtil,
           numCores: parseInt(numCores),
-          maxPart: parseInt(maxPart),
-          maxBandwidth: parseFloat(maxBandwidth)
         }
       });
     }
-  }, [targetUtil, minUtil, maxUtil, numCores, maxPart, maxBandwidth]);
+  }, [targetUtil, minUtil, maxUtil, numCores,]);
 
   const handleTargetUtilChange = (e) => {
     const value = parseFloat(e.target.value);
@@ -1932,14 +1930,14 @@ function TasksetGenerationPage({ config, updateConfig }) {
 
   const handleMaxPartChange = (e) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= 32) {
+    if (!isNaN(value) && value > 0 && value <= 21) {
       setMaxPart(value);
     }
   };
 
   const handleMaxBandwidthChange = (e) => {
     const value = parseFloat(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= 10000) {
+    if (!isNaN(value) && value > 0 && value <= 21) {
       setMaxBandwidth(value);
     }
   };
@@ -1950,8 +1948,8 @@ function TasksetGenerationPage({ config, updateConfig }) {
     if (maxUtil <= 0 || maxUtil > 1) return "Maximum utilization must be between 0 and 1";
     if (minUtil >= maxUtil) return "Minimum utilization must be less than maximum utilization";
     if (numCores <= 0 || numCores > 64) return "Number of cores must be between 1 and 64";
-    if (maxPart <= 0 || maxPart > 32) return "Maximum partitions must be between 1 and 32";
-    if (maxBandwidth <= 0 || maxBandwidth > 10000) return "Maximum bandwidth must be between 1 and 10000 MB/s";
+    if (maxPart <= 0 || maxPart > 21) return "Maximum partitions must be between 1 and 21";
+    if (maxBandwidth <= 0 || maxBandwidth > 21) return "Maximum bandwidth must be between 1 and 21 partitions";
     return "";
   };
 

@@ -14,9 +14,9 @@ const app = express();
 const port = 3001;
 let compiledExecutablePath = null;
 let minPartnum = 1;    // default values
-let maxPartNum = 1023;
+let maxPartNum = 21;
 let minBandnum = 1;
-let maxBandnum = 72;
+let maxBandnum = 21;
 
 app.use(cors());
 app.use(express.json());
@@ -284,27 +284,35 @@ app.post('/update-partitions', (req, res) => {
   }
 });
 
+app.use('/api/send-data', (req, res, next) => {
+  console.log('=== /api/send-data endpoint hit ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 app.post('/api/send-data', (req, res) => {
   const { minPart, maxPart, minBandwidth, maxBandwidth } = req.body;
   
-  // Fixed: Log the actual received data
+  // Log the received data
   console.log('Received data from frontend:', { minPart, maxPart, minBandwidth, maxBandwidth });
 
-  // Convert to integers
-  const minPartnum = parseInt(minPart);
-  const maxPartNum = parseInt(maxPart);
-  const minBandnum = parseInt(minBandwidth);
-  const maxBandnum = parseInt(maxBandwidth);
+  // Update the global variables (these are declared at the top of your file)
+  if (minPart !== undefined) minPartnum = parseInt(minPart);
+  if (maxPart !== undefined) maxPartNum = parseInt(maxPart);
+  if (minBandwidth !== undefined) minBandnum = parseInt(minBandwidth);
+  if (maxBandwidth !== undefined) maxBandnum = parseInt(maxBandwidth);
 
-  // You could save this to a database, process it, etc.
-  // Fixed: Respond with the actual received data
+  console.log('Updated global variables:', { minPartnum, maxPartNum, minBandnum, maxBandnum });
+
+  // Respond with confirmation
   res.json({ 
-    message: 'Data received successfully', 
+    message: 'Data received and updated successfully', 
     received: { minPart, maxPart, minBandwidth, maxBandwidth },
-    parsed: { minPartnum, maxPartNum, minBandnum, maxBandnum }
+    updated: { minPartnum, maxPartNum, minBandnum, maxBandnum }
   });
 });
-
 
 // Get partitions / memory bandwidth
 app.get('/get-partitions', (req, res) => {
@@ -993,7 +1001,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
   }
 
   console.log('=== PROCESSING STARTED ===');
-  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}`);
+  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}, MinPart: ${minPartnum}, MaxPart: ${maxPartNum}, MinBand: ${minBandnum}, MaxBand: ${maxBandnum}`);
 
   try {
     // Step 1: Process files

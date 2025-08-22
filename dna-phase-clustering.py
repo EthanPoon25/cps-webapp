@@ -338,11 +338,39 @@ def parse_arguments():
         default=100,
         help="Number of data points per configuration (default: 100)"
     )
+
+    parser.add_argument(
+        "--minpart",
+        type=int,
+        default=1,
+        help="Minimum partition value (default: 1)"
+    )
+
+    parser.add_argument(
+        "--maxpart",
+        type=int,
+        default=21,
+        help="Maximum partition value (default: 21)"
+    )
+
+    parser.add_argument(
+        "--minband",
+        type=int,
+        default=1,
+        help="Minimum bandwidth value (default: 1)"
+    )
+
+    parser.add_argument(
+        "--maxband",
+        type=int,
+        default=21,
+        help="Maximum bandwidth value (default: 21)"
+    )
     
     return parser.parse_args()
 
-def run_dna_analysis(task, input_dir, output_dir, num_clusters, num_per_config=5, scan_input=False):
-    main(task, input_dir, output_dir, num_clusters, num_per_config, scan_input)
+def run_dna_analysis(task, input_dir, output_dir, num_clusters, num_per_config=5, minpart,maxpart,minband,maxbandscan_input=False):
+    main(task, input_dir, output_dir, num_clusters, num_per_config, minpart,maxpart,minband,maxband,scan_input)
     print(num_clusters,num_per_config)
 
 
@@ -353,6 +381,10 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--num-clusters", type=int, default=5)
     parser.add_argument("--num-per-config", type=int, default=5)
+    parser.add_argument("--minpart", type=int, default=1)
+    parser.add_argument("--maxpart", type=int, default=21)
+    parser.add_argument("--minband", type=int, default=1)
+    parser.add_argument("--maxband", type=int, default=21)
 
     # ✅ Add this line to accept --scan-input as a flag
     parser.add_argument("--scan-input", action="store_true")
@@ -366,6 +398,10 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         num_clusters=args.num_clusters,
         num_per_config=args.num_per_config,
+        minpart=args.minpart,
+        maxpart=args.maxpart,
+        minband=args.minband,
+        maxband=args.maxband,
         scan_input=args.scan_input
     )
 
