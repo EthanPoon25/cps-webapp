@@ -276,8 +276,8 @@ def main(task, input_dir, output_dir, num_clusters, num_per_config, minpart, max
     start_time_total = time .time()  # Start timer for total execution
     
     # Input params
-    cache_sizes = [2 ** i - 1 for i in range(minpart, maxpart+1)]
-    mem_bws = [72 * i for i in range(minband, maxband+1)]
+    cache_sizes = [2 ** i - 1 for i in range(minpart, maxpart)]
+    mem_bws = [72 * i for i in range(minband, maxband)]
     
     # Read in df
     df = read_df(cache_sizes, mem_bws, task, input_dir, num_per_config)
@@ -369,7 +369,7 @@ def parse_arguments():
     
     return parser.parse_args()
 
-def run_dna_analysis(task, input_dir, output_dir, num_clusters, num_per_config, minpart,maxpart,minband,maxbandscan_input=False):
+def run_dna_analysis(task, input_dir, output_dir, num_clusters, num_per_config, minpart,maxpart,minband,maxband,scan_input=False):
     main(task, input_dir, output_dir, num_clusters, num_per_config, minpart,maxpart,minband,maxband,scan_input)
     print(num_clusters,num_per_config)
 

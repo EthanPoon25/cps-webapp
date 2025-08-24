@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const { promisify } = require('util');
+const { file } = require('jszip');
 
 const execAsync = promisify(exec);
 const app = express();
@@ -137,10 +138,10 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
   const maxPartitions = parseInt(maxPart);
   const maxBandwidth = parseInt(maxBand);
   const wcetfile=maxPartitions/numCores;
-  const wcetbw=maxBandwidth*72
-  const wcetpart=maxPartitions**2 -1
+  const wcetbw=(maxBandwidth-1)*72
+  const wcetpart=(maxPartitions-1)**2 -1
+  console.log(`Using wcet parameters: wcetfile=${wcetfile}, wcetbw=${wcetbw}, wcetpart=${wcetpart}`);
 
-  
   target = numCores * target;
   let remainingUtil = target;
   let id = 0;
@@ -153,6 +154,7 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
     // Random task name selection from available task names
     const nameIndex = Math.floor(Math.random() * availableTaskNames.length);
     const selectedTaskName = availableTaskNames[nameIndex];
+    console.log(selectedTaskName)
     
     // Generate random utilization within bounds
     let utilization = Math.random() * (max - min) + min;
@@ -167,12 +169,12 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
     const filenameOut = path.join(
       "output-phases",
       selectedTaskName,
-      `${wcetbw}_${wcetpart}`, // convert numbers to string using template literal
+      `${wcetpart}_${wcetbw}`, // convert numbers to string using template literal
       "wcet.txt"
     );
-    
+    console.log(filenameOut)
     // Check if the wcet.txt file exists for the selected task
-    if (!fs.existsSync(filenameout)) {
+    if (!fs.existsSync(filenameOut)) {
       console.warn(`WCET file not found for task ${selectedTaskName}, trying alternative path...`);
       const alternativePath = path.join("output-phases", selectedTaskName, "1023_1008", "wcet.txt");
       if (fs.existsSync(alternativePath)) {
@@ -183,7 +185,7 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
         continue;
       }
     } else {
-      const content = fs.readFileSync(filenameout, 'utf-8').trim();
+      const content = fs.readFileSync(filenameOut, 'utf-8').trim();
       wcet = parseFloat(content);
     }
 
@@ -344,17 +346,17 @@ app.get('/get-bw', (req, res) => {
 // Modified task generation endpoint - pass currentTaskName but don't add it to the array
 app.post('/api/generate-tasks', (req, res) => {
   try {
-    const { targetUtil, minWithin, maxWithin, cores, maxPart, taskName, exportFormat } = req.body;
+    const { targetUtil, minWithin, maxWithin, cores, taskName, maxPart, maxBandwidth, exportFormat } = req.body;
     
     console.log('Received request body:', req.body);
     
     // Validate required parameters
     if (targetUtil === undefined || minWithin === undefined || maxWithin === undefined || 
-        cores === undefined || maxPart === undefined) {
+        cores === undefined) {
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required parameters: targetUtil, minWithin, maxWithin, cores, maxPart',
-        received: { targetUtil, minWithin, maxWithin, cores, maxPart, taskName }
+        received: { targetUtil, minWithin, maxWithin, cores, taskName }
       });
     }
     
@@ -374,6 +376,7 @@ app.post('/api/generate-tasks', (req, res) => {
     const maxWithinNum = parseFloat(maxWithin);
     const coresNum = parseInt(cores);
     const maxPartnum = parseInt(maxPart);
+    const maxBandnum = parseInt(maxBandwidth);
     
     if (isNaN(targetUtilNum) || isNaN(minWithinNum) || isNaN(maxWithinNum) || 
         isNaN(coresNum) || isNaN(maxPartnum)) {
@@ -384,11 +387,11 @@ app.post('/api/generate-tasks', (req, res) => {
     }
     
     console.log('=== TASK GENERATION STARTED ===');
-    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPart}`);
+    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPart}, maxBandwidth=${maxBandwidth}`);
     console.log(`Available task names: ${availableTaskNames.join(', ')}`);
     
     // Generate task set (don't add taskName to the stored names)
-    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, taskName);
+    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPartnum, maxBandnum, taskName);
     
     if (tasks.length === 0) {
       return res.status(400).json({
@@ -831,7 +834,7 @@ function exportTasksToTXT(tasks, taskName) {
 // UPDATED API endpoint for task generation with better error handling
 app.post('/api/generate-tasks', (req, res) => {
   try {
-    const { targetUtil, minWithin, maxWithin, cores, maxPart, taskName, exportFormat } = req.body;
+    const { targetUtil, minWithin, maxWithin, cores, maxPart, maxBand, taskName, exportFormat } = req.body;
     
     console.log('Received request body:', taskName, req.body);
     
@@ -841,7 +844,7 @@ app.post('/api/generate-tasks', (req, res) => {
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required parameters: targetUtil, minWithin, maxWithin, cores, maxPart, taskName',
-        received: { targetUtil, minWithin, maxWithin, cores, maxPart, taskName }
+        received: { targetUtil, minWithin, maxWithin, cores, maxPart, maxBand, taskName }
       });
     }
     
@@ -861,10 +864,10 @@ app.post('/api/generate-tasks', (req, res) => {
     }
     
     console.log('=== TASK GENERATION STARTED ===');
-    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPart}`);
+    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPartnum}`);
     
     // Generate task set
-    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBandnum, taskName);
+    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPartnum, maxBandnum, taskName);
     
     // Export to files
     const exportedFiles = [];
@@ -1013,7 +1016,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
     // Step 2: Python clustering
     console.log('Step 2: Running Python clustering...');
     
-    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig} --minpart ${minPartnum} --maxpart ${maxPartnum} --minBand ${minBandnum } --maxBand ${maxBandnum} --scan-input`;
+    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig} --minpart ${minPartnum} --maxpart ${maxPartnum} --minband ${minBandnum } --maxband ${maxBandnum} --scan-input`;
     
     const { stdout, stderr } = await execAsync(pythonCommand, {
       maxBuffer: 1024 * 1024 * 10 // Increased buffer size to 10MB

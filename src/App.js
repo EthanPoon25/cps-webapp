@@ -1863,8 +1863,6 @@ function TasksetGenerationPage({ config, updateConfig }) {
   const [minUtil, setMinUtil] = useState(config.tasksetGeneration?.minUtil || 0.1);
   const [maxUtil, setMaxUtil] = useState(config.tasksetGeneration?.maxUtil || 0.3);
   const [numCores, setNumCores] = useState(config.tasksetGeneration?.numCores || 4);
-  const [maxPart, setMaxPart] = useState(config.tasksetGeneration?.maxPart || 21);
-  const [maxBandwidth, setMaxBandwidth] = useState(config.tasksetGeneration?.maxBandwidth || 21); // Default 1000 MB/s
   const [isValid, setIsValid] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationResult, setGenerationResult] = useState(null);
@@ -1877,9 +1875,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
       minUtil > 0 && minUtil <= 1 &&
       maxUtil > 0 && maxUtil <= 1 &&
       minUtil < maxUtil &&
-      numCores > 0 && numCores <= 64 &&
-      maxPart > 0 && maxPart <= 21 &&
-      maxBandwidth > 0 && maxBandwidth <= 21; // Max 10 GB/s
+      numCores > 0 && numCores <= 64; // Max 10 GB/s
     
     setIsValid(valid);
     return valid;
@@ -1888,13 +1884,15 @@ function TasksetGenerationPage({ config, updateConfig }) {
   // Update config whenever inputs change
   React.useEffect(() => {
     const valid = validateInputs();
-    if (valid) {
+    if (validateInputs) {
       updateConfig({
         tasksetGeneration: {
           targetUtil,
           minUtil,
           maxUtil,
           numCores: parseInt(numCores),
+          maxPart: parseInt(config.maxPart),
+          maxBandwidth: parseInt(config.maxBandwidth),
         }
       });
     }
@@ -1928,28 +1926,12 @@ function TasksetGenerationPage({ config, updateConfig }) {
     }
   };
 
-  const handleMaxPartChange = (e) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= 21) {
-      setMaxPart(value);
-    }
-  };
-
-  const handleMaxBandwidthChange = (e) => {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= 21) {
-      setMaxBandwidth(value);
-    }
-  };
-
   const getValidationMessage = () => {
     if (targetUtil <= 0 || targetUtil > 1) return "Target utilization must be between 0 and 1";
     if (minUtil <= 0 || minUtil > 1) return "Minimum utilization must be between 0 and 1";
     if (maxUtil <= 0 || maxUtil > 1) return "Maximum utilization must be between 0 and 1";
     if (minUtil >= maxUtil) return "Minimum utilization must be less than maximum utilization";
     if (numCores <= 0 || numCores > 64) return "Number of cores must be between 1 and 64";
-    if (maxPart <= 0 || maxPart > 21) return "Maximum partitions must be between 1 and 21";
-    if (maxBandwidth <= 0 || maxBandwidth > 21) return "Maximum bandwidth must be between 1 and 21 partitions";
     return "";
   };
 
@@ -1973,9 +1955,9 @@ function TasksetGenerationPage({ config, updateConfig }) {
         minWithin: minUtil,
         maxWithin: maxUtil,
         cores: numCores,
-        maxPart: maxPart,
-        maxBandwidth: maxBandwidth,
         taskName: taskName,
+        maxPart: parseInt(config.maxPart) || 1,
+        maxBandwidth: parseInt(config.maxBandwidth) || 1,
         exportFormat: ['csv', 'txt'] // Export both formats
       };
 
@@ -2304,14 +2286,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
             <span style={{ fontWeight: '500', color: '#374151' }}>Cores:</span>
             <span style={{ marginLeft: '8px', color: '#6b7280' }}>{numCores}</span>
           </div>
-          <div>
-            <span style={{ fontWeight: '500', color: '#374151' }}>Max Partitions:</span>
-            <span style={{ marginLeft: '8px', color: '#6b7280' }}>{maxPart}</span>
-          </div>
-          <div>
-            <span style={{ fontWeight: '500', color: '#374151' }}>Max Bandwidth:</span>
-            <span style={{ marginLeft: '8px', color: '#6b7280' }}>{maxBandwidth} MB/s</span>
-          </div>
+          
         </div>
       </div>
 
