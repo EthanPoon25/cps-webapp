@@ -1,6 +1,6 @@
 # CPS Web App
 
-This Web App is a **React-based web application** designed to automate the preprocessing and taskset generation workflow for benchmark profile data. It integrates advanced algorithms such as **RASCO** and **DNA**, both of which are algoruthms developed and researched at the **University of Pennsylvania's Distributed Systems Lab** to process execution profiles, generate phases, compute WCET and theta values, and automatically construct tasksets according to user-specified utilization and resource constraints.  
+CPS Web App is a **React-based web application** designed to automate the preprocessing and taskset generation workflow for benchmark profile data. It integrates advanced algorithms such as **RASCO** and **DNA** to process execution profiles, generate phases, compute WCET and theta values, and automatically construct tasksets according to user-specified utilization and resource constraints.  
 
 This application removes the need for manually running multiple Python and C scripts, simplifying the process for researchers and developers in real-time systems.
 
@@ -11,7 +11,7 @@ This application removes the need for manually running multiple Python and C scr
 ### 1. Algorithm Selection
 The app allows the user to select the algorithm that drives the preprocessing step:
 
-- **RASCO** – Resource-Aware Scheduling & Clustering Optimization  (in progress)
+- **RASCO** – Resource-Aware Scheduling & Clustering Optimization  
 - **DNA** – Dynamic Nonlinear Approximation ([read the paper](https://www.cis.upenn.edu/~linhphan/papers/rtas21-dna.pdf))  
 
 **How it works:**  
@@ -35,7 +35,7 @@ Users can upload **ZIP files** containing benchmark profile data. The backend pe
    Generates `phases.txt` for each benchmark/configuration, which contains the execution sequences of representative phases.
 
 4. **WCET Calculation**  
-   Produces `wcet.txt` or the files for each benchmark, representing the **Worst-Case Execution Time** of each phase under a standard resource allocation.
+   Produces `wcet.txt` files for each benchmark, representing the **Worst-Case Execution Time** of each phase under a standard resource allocation.
 
 5. **Theta Calculation**  
    Using precompiled C code in `calculate-thetas/`, the app computes `theta.txt` files that encode probabilistic execution behavior for each task phase, reflecting variations across cores and resource partitions.
@@ -59,28 +59,53 @@ Once preprocessing is complete, the app allows the user to specify **taskset gen
 - **Number of cores** (`num_cores`) – system cores available for scheduling.  
 - **Maximum cache/memory bandwidth partitions** (`max_part`) – limits the partitioning for cache and memory bandwidth resources.  
 
+**Generation Algorithm:**
+
+1. Initialize `remaining_util = target_util`.  
+2. While `remaining_util > 0`:
+   - Create a new **task object** with fields:  
+     - `id` – sequential integer identifier.  
+     - `name` – benchmark assigned to the task.  
+     - `utilization` – randomly selected within `[min_util, max_util]`, capped by `remaining_util`.  
+     - `period` – calculated as:  
+       \[
+       \text{period} = \frac{\text{wcet}}{\text{utilization}}
+       \]
+   - Randomly assign a benchmark from the set of processed benchmarks.  
+   - Look up the task’s WCET from the corresponding `wcet.txt` using a **standard resource allocation** (`cache = membw = max_part / num_cores`).  
+   - Reduce `remaining_util` by the task's utilization.  
+3. Save the final collection of task objects as the **taskset**, which can be exported in any convenient format.
+
 **Outcome:**  
-A fully constructed taskset outputted as a .csv file that satisfies user-specified utilization constraints and per-task limits, ready for scheduling experiments or simulations.
+A fully constructed taskset that satisfies user-specified utilization constraints and per-task limits, ready for scheduling experiments or simulations.
 
 ---
 
 ## Getting Started
 
-# Prerequisites
-- Node.js & npm
-- Python 3.x (backend preprocessing scripts)
-- Required Python and C dependencies (see /algorithms/DNA and /calculate-thetas)
+### Prerequisites
+Before running the CPS Web App, ensure you have the following installed:
 
-# Installation
-1) git clone https://github.com/EthanPoon25/cps-webapp.git
-2) cd cps-webapp
-3) npm install
+- **Node.js & npm** – for running the frontend and managing dependencies.  
+- **Python 3.x** – required for backend preprocessing scripts.  
+- **Python/C dependencies** – as defined in the backend setup scripts (`/algorithms/DNA` and `/calculate-thetas`).
 
-# Running the App
-npm start
-npm run dev
+---
 
-The application will be available at http://localhost:3000/.
+### Installation
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/EthanPoon25/cps-webapp.git
+cd cps-webapp
+npm install
+npm install react@19.1.0 react-dom@19.1.0 react-scripts@5.0.1 --save
+
+``````
+#### Run npm run dev on your command line (to run the backend first)
+#### Run npm start (to run the application frontend and allow the front end to run on a different port)
+
+---
 
 ## Technologies Used
 
@@ -101,8 +126,7 @@ CPS Web App leverages a combination of **frontend, backend, and computational te
 
 ## Credits
 
-This project was developed with guidance and inspiration from the **Distributed Systems Lab** at the University of Pennsylvania. Special thanks to:  
+This project was developed under the guidance of the **Distributed Systems Lab** at the University of Pennsylvania.  
 
-- **Professor Linh Thi Xuan Phan**, University of Pennsylvania – conceived the project and provided foundational research and direction on real-time taskset analysis and clustering algorithms.
-- **Abby Eisenklam**, PhD student, University of Pennsylvania – for mentorship, algorithmic guidance, and detailed documentation of the preprocessing and taskset generation workflow.
-
+- **Professor Linh Thi Xuan Phan**, University of Pennsylvania – conceived the project and provided foundational research and direction on real-time taskset analysis and clustering algorithms.  
+- **Abby Eisenklam**, PhD student, University of Pennsylvania – provided mentorship, algorithmic guidance, and detailed documentation of the preprocessing and taskset generation workflow.

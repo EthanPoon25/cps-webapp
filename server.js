@@ -8,10 +8,16 @@ const path = require('path');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const { promisify } = require('util');
+const { file } = require('jszip');
 
 const execAsync = promisify(exec);
 const app = express();
 const port = 3001;
+let compiledExecutablePath = null;
+let minPartnum = 1;    // default values
+let maxPartnum = 21;
+let minBandnum = 1;
+let maxBandnum = 21;
 
 app.use(cors());
 app.use(express.json());
@@ -132,10 +138,10 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
   const maxPartitions = parseInt(maxPart);
   const maxBandwidth = parseInt(maxBand);
   const wcetfile=maxPartitions/numCores;
-  const wcetbw=maxBandwidth*72
-  const wcetpart=maxPartitions**2 -1
+  const wcetbw=(maxBandwidth-1)*72
+  const wcetpart=(maxPartitions-1)**2 -1
+  console.log(`Using wcet parameters: wcetfile=${wcetfile}, wcetbw=${wcetbw}, wcetpart=${wcetpart}`);
 
-  
   target = numCores * target;
   let remainingUtil = target;
   let id = 0;
@@ -148,6 +154,7 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
     // Random task name selection from available task names
     const nameIndex = Math.floor(Math.random() * availableTaskNames.length);
     const selectedTaskName = availableTaskNames[nameIndex];
+    console.log(selectedTaskName)
     
     // Generate random utilization within bounds
     let utilization = Math.random() * (max - min) + min;
@@ -162,12 +169,12 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
     const filenameOut = path.join(
       "output-phases",
       selectedTaskName,
-      `${wcetbw}_${wcetpart}`, // convert numbers to string using template literal
+      `${wcetpart}_${wcetbw}`, // convert numbers to string using template literal
       "wcet.txt"
     );
-    
+    console.log(filenameOut)
     // Check if the wcet.txt file exists for the selected task
-    if (!fs.existsSync(filenameout)) {
+    if (!fs.existsSync(filenameOut)) {
       console.warn(`WCET file not found for task ${selectedTaskName}, trying alternative path...`);
       const alternativePath = path.join("output-phases", selectedTaskName, "1023_1008", "wcet.txt");
       if (fs.existsSync(alternativePath)) {
@@ -178,7 +185,7 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
         continue;
       }
     } else {
-      const content = fs.readFileSync(filenameout, 'utf-8').trim();
+      const content = fs.readFileSync(filenameOut, 'utf-8').trim();
       wcet = parseFloat(content);
     }
 
@@ -201,6 +208,36 @@ function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, maxBa
   
   console.log(`Task set generation complete. Generated ${tasks.length} tasks.`);
   return tasks;
+}
+
+function getAllFilesOptimized(dirPath, maxDepth = 3, currentDepth = 0) {
+  const files = [];
+  const validExtensions = new Set(['.csv', '.json', '.xml', '.txt', '.dat', '.xlsx']);
+  
+  if (currentDepth > maxDepth || !fs.existsSync(dirPath)) {
+    return files;
+  }
+  
+  try {
+    const items = fs.readdirSync(dirPath, { withFileTypes: true });
+    
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item.name);
+      
+      if (item.isDirectory() && currentDepth < maxDepth) {
+        files.push(...getAllFilesOptimized(fullPath, maxDepth, currentDepth + 1));
+      } else if (item.isFile()) {
+        const ext = path.extname(item.name).toLowerCase();
+        if (validExtensions.has(ext)) {
+          files.push(fullPath);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`Could not read directory ${dirPath}:`, error.message);
+  }
+  
+  return files;
 }
 
 // Add new API endpoint to get stored task names
@@ -249,6 +286,35 @@ app.post('/update-partitions', (req, res) => {
   }
 });
 
+app.use('/api/send-data', (req, res, next) => {
+  console.log('=== /api/send-data endpoint hit ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
+app.post('/api/send-data', (req, res) => {
+  const { minPart, maxPart, minBandwidth, maxBandwidth } = req.body;
+  
+  // Log the received data
+  console.log('Received data from frontend:', { minPart, maxPart, minBandwidth, maxBandwidth });
+
+  // Update the global variables (these are declared at the top of your file)
+  if (minPart !== undefined) minPartnum = parseInt(minPart);
+  if (maxPart !== undefined) maxPartnum = parseInt(maxPart);
+  if (minBandwidth !== undefined) minBandnum = parseInt(minBandwidth);
+  if (maxBandwidth !== undefined) maxBandnum = parseInt(maxBandwidth);
+
+  console.log('Updated global variables:', { minPartnum, maxPartnum, minBandnum, maxBandnum });
+
+  // Respond with confirmation
+  res.json({ 
+    message: 'Data received and updated successfully', 
+    received: { minPart, maxPart, minBandwidth, maxBandwidth },
+    updated: { minPartnum, maxPartnum, minBandnum, maxBandnum }
+  });
+});
 
 // Get partitions / memory bandwidth
 app.get('/get-partitions', (req, res) => {
@@ -280,17 +346,17 @@ app.get('/get-bw', (req, res) => {
 // Modified task generation endpoint - pass currentTaskName but don't add it to the array
 app.post('/api/generate-tasks', (req, res) => {
   try {
-    const { targetUtil, minWithin, maxWithin, cores, maxPart, taskName, exportFormat } = req.body;
+    const { targetUtil, minWithin, maxWithin, cores, taskName, maxPart, maxBandwidth, exportFormat } = req.body;
     
     console.log('Received request body:', req.body);
     
     // Validate required parameters
     if (targetUtil === undefined || minWithin === undefined || maxWithin === undefined || 
-        cores === undefined || maxPart === undefined) {
+        cores === undefined) {
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required parameters: targetUtil, minWithin, maxWithin, cores, maxPart',
-        received: { targetUtil, minWithin, maxWithin, cores, maxPart, taskName }
+        received: { targetUtil, minWithin, maxWithin, cores, taskName }
       });
     }
     
@@ -309,10 +375,11 @@ app.post('/api/generate-tasks', (req, res) => {
     const minWithinNum = parseFloat(minWithin);
     const maxWithinNum = parseFloat(maxWithin);
     const coresNum = parseInt(cores);
-    const maxPartNum = parseInt(maxPart);
+    const maxPartnum = parseInt(maxPart);
+    const maxBandnum = parseInt(maxBandwidth);
     
     if (isNaN(targetUtilNum) || isNaN(minWithinNum) || isNaN(maxWithinNum) || 
-        isNaN(coresNum) || isNaN(maxPartNum)) {
+        isNaN(coresNum) || isNaN(maxPartnum)) {
       return res.status(400).json({ 
         success: false, 
         error: 'All parameters must be valid numbers'
@@ -320,11 +387,11 @@ app.post('/api/generate-tasks', (req, res) => {
     }
     
     console.log('=== TASK GENERATION STARTED ===');
-    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPart}`);
+    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPart}, maxBandwidth=${maxBandwidth}`);
     console.log(`Available task names: ${availableTaskNames.join(', ')}`);
     
     // Generate task set (don't add taskName to the stored names)
-    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, taskName);
+    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPartnum, maxBandnum, taskName);
     
     if (tasks.length === 0) {
       return res.status(400).json({
@@ -433,94 +500,288 @@ class Task {
   }
 }
 
-function generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, taskName) {
-  const tasks = [];
-  
-  // Add the current taskName to savedTaskNames if it's not already there (no repeats)
-  if (taskName && !savedTaskNames.includes(taskName)) {
-    savedTaskNames.push(taskName);
-    console.log(`Added new task name: ${taskName}`);
-  }
-  
-  // Remove duplicates and use the array
-  const availableTaskNames = [...new Set(savedTaskNames)];
-  
-  // If no task names available, return empty task set
-  if (availableTaskNames.length === 0) {
-    console.warn('No task names available for task generation');
-    return [];
-  }
-  
-  // Convert string inputs to numbers (matching Python input() behavior)
-  target = parseFloat(targetUtil);
-  const min = parseFloat(minWithin);
-  const max = parseFloat(maxWithin);
-  const numCores = parseInt(cores);
-  const maxPartitions = parseInt(maxPart);
-  
-  target=numCores*target;
-  let remainingUtil = target;
-  let id = 0;
-  
-  console.log(`Generating task set with target utilization: ${target}`);
-  console.log(`Available task names: ${availableTaskNames.join(', ')}`);
-  
-  while (remainingUtil > 0) {
-    id++;
-    
-    // Random task name selection from available task names
-    const nameIndex = Math.floor(Math.random() * availableTaskNames.length);
-    const selectedTaskName = availableTaskNames[nameIndex];
-    
-    // Generate random utilization within bounds
-    let utilization = Math.random() * (max - min) + min;
-    
-    // Don't exceed remaining utilization
-    if (utilization > remainingUtil) {
-      utilization = remainingUtil;
+function extractZipFileOptimized(zipPath, taskName) {
+  return new Promise((resolve, reject) => {
+    try {
+      const zip = new AdmZip(zipPath);
+      const entries = zip.getEntries();
+      
+      const taskDir = path.join('./input-data', taskName);
+      ensureDirectoryExists(taskDir);
+      
+      const relevantEntries = entries.filter(entry => {
+        if (entry.isDirectory) return false;
+        const name = entry.entryName.toLowerCase();
+        return ['.csv', '.json', '.xml', '.txt', '.dat', '.xlsx'].some(ext => name.endsWith(ext));
+      });
+      
+      console.log(`Extracting ${relevantEntries.length} files to input-data/${taskName}`);
+      
+      relevantEntries.forEach(entry => {
+        try {
+          const fileName = path.basename(entry.entryName);
+          const uniqueFileName = getUniqueFilename(taskDir, fileName);
+          const finalTargetPath = path.join(taskDir, uniqueFileName);
+          
+          const fileData = zip.readFile(entry);
+          fs.writeFileSync(finalTargetPath, fileData);
+          
+        } catch (err) {
+          console.warn(`Failed to extract ${entry.entryName}:`, err.message);
+        }
+      });
+      
+      console.log(`Extraction completed to input-data/${taskName}`);
+      resolve(true);
+    } catch (error) {
+      console.error('Error in zip extraction:', error);
+      reject(false);
     }
-    
-    const fs = require('fs');
-    let wcet;
-    const filenameout = path.join("output-phases", selectedTaskName, "15_360", "wcet.txt");
-    
-    // Check if the wcet.txt file exists for the selected task
-    if (!fs.existsSync(filenameout)) {
-      console.warn(`WCET file not found for task ${selectedTaskName}, trying alternative path...`);
-      // Try alternative path or use a default value
-      const alternativePath = path.join("output-phases", selectedTaskName, "1023_1008", "wcet.txt");
-      if (fs.existsSync(alternativePath)) {
-        const content = fs.readFileSync(alternativePath, 'utf-8').trim();
-        wcet = parseFloat(content);
-      } else {
-        console.error(`No WCET file found for task ${selectedTaskName}, skipping this task`);
-        continue; // Skip this iteration and try again
-      }
-    } else {
-      const content = fs.readFileSync(filenameout, 'utf-8').trim();
-      wcet = parseFloat(content);
-    }
-
-    // Validate wcet value
-    if (isNaN(wcet) || wcet <= 0) {
-      console.error(`Invalid WCET value for task ${selectedTaskName}: ${wcet}, skipping this task`);
-      continue; // Skip this iteration and try again
-    }
-    
-    // Calculate period from utilization: period = wcet / utilization
-    const period = wcet / utilization;
-    
-    remainingUtil -= utilization;
-    
-    const task = new Task(id, selectedTaskName, utilization, period, wcet);
-    tasks.push(task);
-    
-    console.log(`Generated: ${task.toString()}`);
-  }
-  
-  console.log(`Task set generation complete. Generated ${tasks.length} tasks.`);
-  return tasks;
+  });
 }
+
+function getAllFilesOptimized(dirPath, maxDepth = 3, currentDepth = 0) {
+  const files = [];
+  const validExtensions = new Set(['.csv', '.json', '.xml', '.txt', '.dat', '.xlsx']);
+  
+  if (currentDepth > maxDepth || !fs.existsSync(dirPath)) {
+    return files;
+  }
+  
+  try {
+    const items = fs.readdirSync(dirPath, { withFileTypes: true });
+    
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item.name);
+      
+      if (item.isDirectory() && currentDepth < maxDepth) {
+        files.push(...getAllFilesOptimized(fullPath, maxDepth, currentDepth + 1));
+      } else if (item.isFile()) {
+        const ext = path.extname(item.name).toLowerCase();
+        if (validExtensions.has(ext)) {
+          files.push(fullPath);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`Could not read directory ${dirPath}:`, error.message);
+  }
+  
+  return files;
+}
+
+function getUniqueFilename(taskDir, originalName) {
+  const targetPath = path.join(taskDir, originalName);
+  
+  if (!fs.existsSync(targetPath)) {
+    return originalName;
+  }
+  
+  const ext = path.extname(originalName);
+  const nameWithoutExt = path.basename(originalName, ext);
+  const timestamp = Date.now();
+  return `${nameWithoutExt}_${timestamp}${ext}`;
+}
+
+async function processUploadedFilesOptimized(files, taskName) {
+  const taskDir = path.join('./input-data', taskName);
+  ensureDirectoryExists(taskDir);
+
+  const processedFiles = [];
+  const zipFiles = files.filter(f => f.originalname.toLowerCase().endsWith('.zip'));
+  const regularFiles = files.filter(f => !f.originalname.toLowerCase().endsWith('.zip'));
+
+  console.log(`Processing ${zipFiles.length} zip files and ${regularFiles.length} regular files`);
+
+  // Process regular files
+  if (regularFiles.length > 0) {
+    console.log('Processing regular files...');
+    for (const file of regularFiles) {
+      const uniqueName = getUniqueFilename(taskDir, file.originalname);
+      const destPath = path.join(taskDir, uniqueName);
+      
+      try {
+        fs.renameSync(file.path, destPath);
+        processedFiles.push(destPath);
+      } catch (err) {
+        console.error(`Error moving ${file.originalname}:`, err.message);
+      }
+    }
+  }
+
+  // Process zip files
+  for (const file of zipFiles) {
+    try {
+      await extractZipFileOptimized(file.path, taskName);
+    } catch (err) {
+      console.error(`Error processing zip ${file.originalname}:`, err.message);
+    } finally {
+      try {
+        fs.unlinkSync(file.path);
+      } catch (err) {
+        console.warn(`Could not delete zip ${file.path}`);
+      }
+    }
+  }
+
+  const finalFiles = getAllFilesOptimized(taskDir, 1);
+  console.log(`Total files in input-data/${taskName}: ${finalFiles.length}`);
+  
+  return finalFiles;
+}
+
+async function compileOnceIfNeeded() {
+  const buildDir = path.join(__dirname, 'calculate-thetas');
+  const exePath = path.join(__dirname, 'dna_tool.exe');
+  const sourcePath = path.join(buildDir, 'dna_tool.c');
+  
+  if (!fs.existsSync(buildDir) || !fs.existsSync(sourcePath)) {
+    throw new Error(`Source files not found: ${sourcePath}`);
+  }
+  
+  let needsCompile = !compiledExecutablePath || !fs.existsSync(compiledExecutablePath);
+  
+  if (!needsCompile) {
+    try {
+      const exeStat = fs.statSync(compiledExecutablePath);
+      const srcStat = fs.statSync(sourcePath);
+      needsCompile = srcStat.mtime > exeStat.mtime;
+    } catch (err) {
+      needsCompile = true;
+    }
+  }
+  
+  if (needsCompile) {
+    console.log('Compiling C program...');
+    
+    try {
+      await execAsync('make clean', { cwd: buildDir, timeout: 10000 });
+    } catch (err) {
+      // Ignore clean errors
+    }
+    
+    const { stdout, stderr } = await execAsync('make', { 
+      cwd: buildDir,
+      timeout: 30000 
+    });
+    
+    if (stdout) console.log('Compile output:', stdout);
+    if (stderr && !stderr.includes('warning')) console.error('Compile errors:', stderr);
+    
+    if (!fs.existsSync(exePath)) {
+      throw new Error('Compilation failed - executable not created');
+    }
+    
+    compiledExecutablePath = exePath;
+    console.log('Compilation completed');
+  } else {
+    console.log('Using cached executable');
+  }
+  
+  return compiledExecutablePath;
+}
+
+// FIXED: Removed timeout conflicts in theta generation
+async function generateThetaFilesOptimized(taskName) {
+  try {
+    console.log('Starting theta generation...');
+    
+    const exePath = await compileOnceIfNeeded();
+    
+    const taskEnum = TASK_NAMES[taskName.toLowerCase()];
+    if (taskEnum === undefined) {
+      console.warn(`Unknown task: ${taskName}, running without task parameter`);
+    }
+    
+    console.log(`Running theta calculations for task: ${taskName}`);
+    
+    return new Promise((resolve, reject) => {
+      const isWindows = process.platform === 'win32';
+      const command = isWindows ? 'dna_tool.exe' : './dna_tool';
+      const args = taskEnum !== undefined ? [taskEnum.toString()] : [];
+      
+      console.log(`Executing: ${command} ${args.join(' ')}`);
+      
+      // FIXED: Removed timeout from spawn options
+      const child = spawn(command, args, {
+        cwd: __dirname,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+      
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      child.on('close', (code) => {
+        if (code === 0) {
+          console.log('Theta calculation completed successfully');
+          resolve(true);
+        } else {
+          console.error(`Theta calculation failed with code: ${code}`);
+          if (stderr) console.error('Error output:', stderr);
+          resolve(false);
+        }
+      });
+      
+      child.on('error', (err) => {
+        console.error('Spawn error:', err);
+        resolve(false);
+      });
+      
+      // FIXED: Removed the manual timeout that was killing the process
+    });
+    
+  } catch (err) {
+    console.error('Error in theta generation:', err);
+    return false;
+  }
+}
+
+function verifyThetaFilesOptimized(taskName) {
+  const taskOutputDir = path.join(__dirname, 'output-phases', taskName);
+  
+  if (!fs.existsSync(taskOutputDir)) {
+    return { success: false, error: 'Output directory not found' };
+  }
+
+  let subdirs;
+  try {
+    subdirs = fs.readdirSync(taskOutputDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+  } catch (err) {
+    return { success: false, error: 'Could not read output directory' };
+  }
+
+  let thetasFound = 0;
+  const missingThetas = [];
+
+  for (const subdir of subdirs) {
+    const thetaPath = path.join(taskOutputDir, subdir, 'theta.txt');
+    
+    if (fs.existsSync(thetaPath)) {
+      thetasFound++;
+    } else {
+      missingThetas.push(subdir);
+    }
+  }
+
+  return {
+    success: missingThetas.length === 0,
+    totalDirs: subdirs.length,
+    thetasFound: thetasFound,
+    missingThetas: missingThetas.slice(0, 5)
+  };
+}
+
+
 
 function exportTasksToCSV(tasks, taskName) {
   const headers = ['ID', 'Name', 'Utilization', 'Period', 'WCET'];
@@ -573,7 +834,7 @@ function exportTasksToTXT(tasks, taskName) {
 // UPDATED API endpoint for task generation with better error handling
 app.post('/api/generate-tasks', (req, res) => {
   try {
-    const { targetUtil, minWithin, maxWithin, cores, maxPart, taskName, exportFormat } = req.body;
+    const { targetUtil, minWithin, maxWithin, cores, maxPart, maxBand, taskName, exportFormat } = req.body;
     
     console.log('Received request body:', taskName, req.body);
     
@@ -583,7 +844,7 @@ app.post('/api/generate-tasks', (req, res) => {
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required parameters: targetUtil, minWithin, maxWithin, cores, maxPart, taskName',
-        received: { targetUtil, minWithin, maxWithin, cores, maxPart, taskName }
+        received: { targetUtil, minWithin, maxWithin, cores, maxPart, maxBand, taskName }
       });
     }
     
@@ -592,10 +853,10 @@ app.post('/api/generate-tasks', (req, res) => {
     const minWithinNum = parseFloat(minWithin);
     const maxWithinNum = parseFloat(maxWithin);
     const coresNum = parseInt(cores);
-    const maxPartNum = parseInt(maxPart);
+    const maxPartnum = parseInt(maxPart);
     
     if (isNaN(targetUtilNum) || isNaN(minWithinNum) || isNaN(maxWithinNum) || 
-        isNaN(coresNum) || isNaN(maxPartNum)) {
+        isNaN(coresNum) || isNaN(maxPartnum)) {
       return res.status(400).json({ 
         success: false, 
         error: 'All parameters must be valid numbers'
@@ -603,10 +864,10 @@ app.post('/api/generate-tasks', (req, res) => {
     }
     
     console.log('=== TASK GENERATION STARTED ===');
-    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPart}`);
+    console.log(`Parameters: targetUtil=${targetUtil}, minWithin=${minWithin}, maxWithin=${maxWithin}, cores=${cores}, maxPart=${maxPartnum}`);
     
     // Generate task set
-    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPart, taskName);
+    const tasks = generateTaskSet(targetUtil, minWithin, maxWithin, cores, maxPartnum, maxBandnum, taskName);
     
     // Export to files
     const exportedFiles = [];
@@ -655,8 +916,6 @@ app.post('/api/generate-tasks', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
-
-
 
 
 
@@ -745,7 +1004,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
   }
 
   console.log('=== PROCESSING STARTED ===');
-  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}`);
+  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}, MinPart: ${minPartnum}, MaxPart: ${maxPartnum}, MinBand: ${minBandnum}, MaxBand: ${maxBandnum}`);
 
   try {
     // Step 1: Process files
@@ -757,7 +1016,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
     // Step 2: Python clustering
     console.log('Step 2: Running Python clustering...');
     
-    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig || 5} --scan-input`;
+    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig} --minpart ${minPartnum} --maxpart ${maxPartnum} --minband ${minBandnum } --maxband ${maxBandnum} --scan-input`;
     
     const { stdout, stderr } = await execAsync(pythonCommand, {
       maxBuffer: 1024 * 1024 * 10 // Increased buffer size to 10MB

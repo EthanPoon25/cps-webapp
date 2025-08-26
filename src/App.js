@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, CheckCircle, FileText, Cpu, Database, Activity, ChevronRight, ChevronLeft, FolderOpen } from 'lucide-react';
 import JSZip from 'jszip';
 import {Settings, Trash2, Eye, EyeOff } from 'lucide-react';
@@ -13,6 +13,7 @@ function App() {
   });
 
   const pages = [
+    { id: 'config', title: 'Resource Types', component: ResourceTypesPage },
     { id: 'phase', title: 'Taskset Config', component: TasksetConfigurationPage },
     { id: 'taskset', title: 'Upload and Process Files', component: FileUploadPage },
     { id: 'generation', title: 'Taskset Generation', component: TasksetGenerationPage }
@@ -21,10 +22,14 @@ function App() {
   const canProceed = (pageIndex) => {
     switch (pageIndex) {
       case 0: // Algo
+        return (
+        config.maxPart!== config.minPart && config.maxBandwidth!== config.minBandwidth
+      );
+      case 1:
         return config.algorithm?.type;
-      case 1: // File Upload
+      case 2: // File Upload
          return (config.tasks?.length ?? 0) > 0;;
-      case 2: // Phase Detection
+      case 3: // Phase Detection
         return config.algorithm;
       default:
         return false;
@@ -50,6 +55,7 @@ function App() {
   const CurrentPageComponent = pages[currentPage].component;
 
   return (
+    
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)',
@@ -218,7 +224,8 @@ function ResourceTypesPage({ config, updateConfig }) {
   const resourceTypeOptions = [
     { id: 'cache', label: 'Cache Memory', icon: Database, description: 'L1/L2/L3 cache analysis' },
     { id: 'memory', label: 'Memory Bandwidth', icon: Activity, description: 'RAM bandwidth utilization' },
-      ];
+  ];
+
 
   const updateResourceType = (resourceId, checked) => {
     const newResourceTypes = checked 
@@ -239,15 +246,149 @@ function ResourceTypesPage({ config, updateConfig }) {
   };
 
   const updatePartitions = (resourceId, count) => {
-  updateConfig(prevConfig => ({
-    ...prevConfig, // keep other config fields
-    partitions: {
-      ...prevConfig.partitions, // keep other resources
-      [resourceId]: parseInt(count) || 1
-    }
-  }));
-};
+    updateConfig(prevConfig => ({
+      ...prevConfig,
+      partitions: {
+        ...prevConfig.partitions,
+        [resourceId]: parseInt(count) || 1
+      }
+    }));
+  };
 
+  // Handlers for the new configuration sections
+  const handleMaxPartChange = (e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = 1;
+    if (val > 21) val = 21;
+    if (val < 1) val = 1;
+    
+    // Ensure max is not less than min
+    const currentMin = config.minPart || 1;
+    if (val < currentMin) {
+      val = currentMin;
+    }
+    
+    updateConfig({ ...config, maxPart: val });
+    
+    // Optional: Send to backend
+    fetch('/update-max-partitions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maxPart: val })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Max partitions updated:', data))
+    .catch(error => console.error('Error updating max partitions:', error));
+  };
+
+  const handleMinPartChange = (e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = 1;
+    if (val > 21) val = 21;
+    if (val < 1) val = 1;
+    
+    // Ensure min is not greater than max
+    const currentMax = config.maxPart || 21;
+    if (val > currentMax) {
+      val = currentMax;
+    }
+    
+    updateConfig({ ...config, minPart: val });
+    
+    // Optional: Send to backend
+    fetch('/update-min-partitions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minPart: val })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Min partitions updated:', data))
+    .catch(error => console.error('Error updating min partitions:', error));
+  };
+
+  const handleMaxBandwidthChange = (e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = 1;
+    if (val > 21) val = 21;
+    if (val < 1) val = 1;
+    
+    // Ensure max is not less than min
+    const currentMin = config.minBandwidth || 1;
+    if (val < currentMin) {
+      val = currentMin;
+    }
+    
+    updateConfig({ ...config, maxBandwidth: val });
+    
+    // Optional: Send to backend
+    fetch('/update-max-bandwidth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maxBandwidth: val })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Max bandwidth updated:', data))
+    .catch(error => console.error('Error updating max bandwidth:', error));
+  };
+
+  const handleMinBandwidthChange = (e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = 1;
+    if (val > 10000) val = 10000;
+    if (val < 1) val = 1;
+    
+    // Ensure min is not greater than max
+    const currentMax = config.maxBandwidth || 21;
+    if (val > currentMax) {
+      val = currentMax;
+    }
+    
+    updateConfig({ ...config, minBandwidth: val });
+    
+    // Optional: Send to backend
+    fetch('/update-min-bandwidth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minBandwidth: val })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Min bandwidth updated:', data))
+    .catch(error => console.error('Error updating min bandwidth:', error));
+  };
+
+  React.useEffect(() => {
+    if (!config) return;
+
+    const requestBody = {
+      minPart: config.minPart,
+      maxPart: config.maxPart,
+      minBandwidth: config.minBandwidth,
+      maxBandwidth: config.maxBandwidth,
+      
+    };
+  fetch('http://localhost:3001/api/send-data', {   // point to your backend
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      // 👇 log confirmation on frontend
+      console.log('📩 Frontend got confirmation from backend:', data);
+    })
+    .catch((error) => {
+      console.error('❌ Error sending data:', error);
+    });
+  
+  }, [
+    config.minPart,
+    config.maxPart,
+    config.minBandwidth,
+    config.maxBandwidth,
+    
+  ]);
 
   return (
     <div>
@@ -257,216 +398,211 @@ function ResourceTypesPage({ config, updateConfig }) {
         color: '#111827',
         marginBottom: '24px'
       }}>
-        Select Resource Types
+        Configure System Resources
       </h2>
       <p style={{
         color: '#6b7280',
         marginBottom: '32px'
       }}>
-        Choose the system resources you want to analyze. For each selected resource, specify the number of partitions.
+        Set maximum resource limits and choose the system resources you want to analyze.
       </p>
 
-      <div style={{ display: 'grid', gap: '16px' }}>
-        {resourceTypeOptions.map((resource) => {
-          const Icon = resource.icon;
-          const isSelected = config.resourceTypes.includes(resource.id);
+      {/* System Configuration Section */}
+      <div style={{ 
+        display: 'grid', 
+        gap: '24px',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+        marginBottom: '40px'
+      }}>
+        {/* Cache Partitions Configuration */}
+        <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '24px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Settings style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
+            Cache Partitions Range
+          </h3>
           
-          return (
-            <div key={resource.id} style={{
-              border: '2px solid',
-              borderColor: isSelected ? '#3b82f6' : '#e5e7eb',
-              borderRadius: '8px',
-              padding: '24px',
-              transition: 'all 0.2s',
-              backgroundColor: isSelected ? '#eff6ff' : 'white'
-            }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '16px', 
+            marginBottom: '12px' 
+          }}>
+            <div>
               <label style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                cursor: 'pointer'
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                display: 'block',
+                marginBottom: '8px'
               }}>
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={(e) => updateResourceType(resource.id, e.target.checked)}
-                  style={{
-                    marginTop: '4px',
-                    width: '20px',
-                    height: '20px',
-                    accentColor: '#2563eb'
-                  }}
-                />
-                <div style={{ marginLeft: '16px', flex: 1 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    marginBottom: '8px'
-                  }}>
-                    <Icon style={{
-                      width: '24px',
-                      height: '24px',
-                      color: '#2563eb',
-                      marginRight: '12px'
-                    }} />
-                    <h3 style={{
-                      fontSize: '18px',
-                      fontWeight: '600',
-                      color: '#111827'
-                    }}>
-                      {resource.label}
-                    </h3>
-                  </div>
-                  <p style={{
-                    color: '#6b7280',
-                    marginBottom: '16px'
-                  }}>
-                    {resource.description}
-                  </p>
-                  
-                  {isSelected && (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {/* Partitions input */}
-{/* Cache partitions input */}
-{resource.id === 'cache' && (
-  <div style={{ marginTop: '12px' }}>
-    <label style={{
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#374151',
-      marginRight: '12px'
-    }}>
-      Maximum Number of Partitions (1–20):
-    </label>
-    <input
-      type="number"
-      min="1"
-      max="20"
-      value={config.partitions || 1}
-      onChange={(e) => {
-        let val = parseInt(e.target.value);
-        if (isNaN(val)) val = 1;
-        if (val > 20) val = 20;
-        if (val < 1) val = 1;
-        
-        console.log('Sending value to backend:', val); // Add this
-        
-        updateConfig({ ...config, partitions: val });
-        
-        fetch('/update-partitions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({partitions: val })
-        })
-        .then(response => response.json())
-        .then(data => console.log('Backend response:', data))
-        .catch(error => console.error('Fetch error:', error));
-      }}
-            style={{
-              width: '80px',
-              padding: '4px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '14px'
-            }}
-          />
-        </div>
-      )}
-
-{/* Memory Bandwidth input */}
-{resource.id === 'memory' && (
-  <div style={{ marginTop: '12px' }}>
-    <label style={{
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#374151',
-      marginRight: '12px'
-    }}>
-      Maximum number of partitions (1-20):
-    </label>
-    <input
-      type="number"
-      min="1"
-      max="20"
-      value={config.memoryBandwidth || 1}
-      onChange={async (e) => {
-        let val = parseInt(e.target.value);
-        if (isNaN(val)) val = 1;
-        if (val > 20) val = 20;
-        if (val < 1) val = 1;
-        
-        // Update local state first
-        updateConfig({ ...config, memoryBandwidth: val });
-        
-        try {
-          const response = await fetch('/update-bw', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ memoryBandwidth: val })
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Failed to update memory bandwidth:', errorData.error);
-            // Optionally show user feedback here
-          } else {
-            const successData = await response.json();
-            console.log('Memory bandwidth updated successfully:', successData);
-          }
-        } catch (error) {
-          console.error('Network error updating memory bandwidth:', error);
-          // Optionally revert local state or show error to user
-        }
-      }}
-      style={{
-        width: '80px',
-        padding: '4px 12px',
-        border: '1px solid #d1d5db',
-        borderRadius: '6px',
-        fontSize: '14px'
-      }}
-    />
-  </div>
-)}
-
-                  </div>
-                )}
-
-                </div>
+                Minimum Partitions
               </label>
+              <input
+                type="number"
+                min="1"
+                max="21"
+                value={config.minPart || 1}
+                onChange={handleMinPartChange}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '16px',
+                  backgroundColor: 'white'
+                }}
+              />
             </div>
-          );
-        })}
+            
+            <div>
+              <label style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                Maximum Partitions
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="21"
+                value={config.maxPart || 1}
+                onChange={handleMaxPartChange}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '16px',
+                  backgroundColor: 'white'
+                }}
+              />
+            </div>
+          </div>
+          
+          <p style={{
+            fontSize: '13px',
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            Range: {config.minPart || 1} - {config.maxPart || 1} cache partitions available for task isolation
+          </p>
+        </div>
+
+        {/* Memory Bandwidth Configuration */}
+        <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '24px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Zap style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
+            Memory Bandwidth Range
+          </h3>
+          
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '16px', 
+            marginBottom: '12px' 
+          }}>
+            <div>
+              <label style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                Minimum Partitions
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="21"
+                step="1"
+                value={config.minBandwidth || 1}
+                onChange={handleMinBandwidthChange}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '16px',
+                  backgroundColor: 'white'
+                }}
+              />
+            </div>
+            
+            <div>
+              <label style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                Maximum Partitions
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="21"
+                step="1"
+                value={config.maxBandwidth || 1}
+                onChange={handleMaxBandwidthChange}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '16px',
+                  backgroundColor: 'white'
+                }}
+              />
+            </div>
+          </div>
+          
+          <p style={{
+            fontSize: '13px',
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            Range: {config.minBandwidth || 1} - {config.maxBandwidth || 1} partitions memory bandwidth available for task allocation
+          </p>
+        </div>
       </div>
 
-      {config.resourceTypes.length > 0 && (
-        <div style={{
-          marginTop: '32px',
-          padding: '16px',
-          backgroundColor: '#f0fdf4',
-          border: '1px solid #bbf7d0',
-          borderRadius: '8px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <CheckCircle style={{
-              width: '20px',
-              height: '20px',
-              color: '#16a34a',
-              marginRight: '8px'
-            }} />
-            <span style={{
-              color: '#15803d',
-              fontWeight: '500'
-            }}>
-              {config.resourceTypes.length} resource type(s) selected
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Resource Types Selection */}
+      
     </div>
   );
 }
 
-// Page 4: Taskset Configuration
+
+// Page 2: Taskset Configuration
 function TasksetConfigurationPage({ config, updateConfig }) {
   const algorithms = [
     {
@@ -612,17 +748,7 @@ function TasksetConfigurationPage({ config, updateConfig }) {
                       {algorithm.description}
                     </p>
                     
-                    {isSelected && (
-                      <div style={{
-                        backgroundColor: '#f8fafc',
-                        padding: '16px',
-                        borderRadius: '6px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                      
-                        
-                      </div>
-                    )}
+
                   </div>
                 </div>
               </div>
@@ -1001,6 +1127,7 @@ const processCurrentTask = async () => {
     
     setDownloadUrl(downloadUrl);
     setProcessingStatus('Done, download output');
+    
   } catch (err) {
     console.error('Error details:', err);
     setProcessingStatus(`Error: ${err.message}`);
@@ -1291,7 +1418,7 @@ const processBatchTasks = async () => {
             style={{ display: 'none' }}
           />
           <Upload style={{ width: '48px', height: '48px', color: '#9ca3af', marginBottom: '16px' }} />
-          <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Upload Files</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Upload Files or Zip Folders</h3>
           <p style={{ color: '#6b7280', marginBottom: '8px' }}>
             Drop files here or click to upload
           </p>
@@ -1736,8 +1863,6 @@ function TasksetGenerationPage({ config, updateConfig }) {
   const [minUtil, setMinUtil] = useState(config.tasksetGeneration?.minUtil || 0.1);
   const [maxUtil, setMaxUtil] = useState(config.tasksetGeneration?.maxUtil || 0.3);
   const [numCores, setNumCores] = useState(config.tasksetGeneration?.numCores || 4);
-  const [maxPart, setMaxPart] = useState(config.tasksetGeneration?.maxPart || 8);
-  const [maxBandwidth, setMaxBandwidth] = useState(config.tasksetGeneration?.maxBandwidth || 1000); // Default 1000 MB/s
   const [isValid, setIsValid] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationResult, setGenerationResult] = useState(null);
@@ -1750,9 +1875,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
       minUtil > 0 && minUtil <= 1 &&
       maxUtil > 0 && maxUtil <= 1 &&
       minUtil < maxUtil &&
-      numCores > 0 && numCores <= 64 &&
-      maxPart > 0 && maxPart <= 32 &&
-      maxBandwidth > 0 && maxBandwidth <= 10000; // Max 10 GB/s
+      numCores > 0 && numCores <= 64; // Max 10 GB/s
     
     setIsValid(valid);
     return valid;
@@ -1761,19 +1884,19 @@ function TasksetGenerationPage({ config, updateConfig }) {
   // Update config whenever inputs change
   React.useEffect(() => {
     const valid = validateInputs();
-    if (valid) {
+    if (validateInputs) {
       updateConfig({
         tasksetGeneration: {
           targetUtil,
           minUtil,
           maxUtil,
           numCores: parseInt(numCores),
-          maxPart: parseInt(maxPart),
-          maxBandwidth: parseFloat(maxBandwidth)
+          maxPart: parseInt(config.maxPart),
+          maxBandwidth: parseInt(config.maxBandwidth),
         }
       });
     }
-  }, [targetUtil, minUtil, maxUtil, numCores, maxPart, maxBandwidth]);
+  }, [targetUtil, minUtil, maxUtil, numCores,]);
 
   const handleTargetUtilChange = (e) => {
     const value = parseFloat(e.target.value);
@@ -1803,28 +1926,12 @@ function TasksetGenerationPage({ config, updateConfig }) {
     }
   };
 
-  const handleMaxPartChange = (e) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= 32) {
-      setMaxPart(value);
-    }
-  };
-
-  const handleMaxBandwidthChange = (e) => {
-    const value = parseFloat(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= 10000) {
-      setMaxBandwidth(value);
-    }
-  };
-
   const getValidationMessage = () => {
     if (targetUtil <= 0 || targetUtil > 1) return "Target utilization must be between 0 and 1";
     if (minUtil <= 0 || minUtil > 1) return "Minimum utilization must be between 0 and 1";
     if (maxUtil <= 0 || maxUtil > 1) return "Maximum utilization must be between 0 and 1";
     if (minUtil >= maxUtil) return "Minimum utilization must be less than maximum utilization";
     if (numCores <= 0 || numCores > 64) return "Number of cores must be between 1 and 64";
-    if (maxPart <= 0 || maxPart > 32) return "Maximum partitions must be between 1 and 32";
-    if (maxBandwidth <= 0 || maxBandwidth > 10000) return "Maximum bandwidth must be between 1 and 10000 MB/s";
     return "";
   };
 
@@ -1848,9 +1955,9 @@ function TasksetGenerationPage({ config, updateConfig }) {
         minWithin: minUtil,
         maxWithin: maxUtil,
         cores: numCores,
-        maxPart: maxPart,
-        maxBandwidth: maxBandwidth,
         taskName: taskName,
+        maxPart: parseInt(config.maxPart) || 1,
+        maxBandwidth: parseInt(config.maxBandwidth) || 1,
         exportFormat: ['csv', 'txt'] // Export both formats
       };
 
@@ -2141,112 +2248,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
           </p>
         </div>
 
-        {/* Maximum Cache Partitions */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          padding: '24px',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#111827',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <Settings style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
-            Maximum Cache Partitions
-          </h3>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              display: 'block',
-              marginBottom: '8px'
-            }}>
-              Max Cache Partitions (1-32)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="32"
-              value={maxPart}
-              onChange={handleMaxPartChange}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '16px',
-                backgroundColor: 'white'
-              }}
-            />
-          </div>
-          <p style={{
-            fontSize: '13px',
-            color: '#6b7280',
-            fontStyle: 'italic'
-          }}>
-            Maximum number of cache partitions available for task isolation
-          </p>
-        </div>
-
-        {/* Maximum Bandwidth */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          padding: '24px',
-          borderRadius: '8px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#111827',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <Zap style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
-            Maximum Memory Bandwidth
-          </h3>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#374151',
-              display: 'block',
-              marginBottom: '8px'
-            }}>
-              Max Bandwidth (MB/s, 1-10000)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="10000"
-              step="10"
-              value={maxBandwidth}
-              onChange={handleMaxBandwidthChange}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '16px',
-                backgroundColor: 'white'
-              }}
-            />
-          </div>
-          <p style={{
-            fontSize: '13px',
-            color: '#6b7280',
-            fontStyle: 'italic'
-          }}>
-            Maximum memory bandwidth available for task allocation (in MB/s)
-          </p>
-        </div>
+        
       </div>
 
       {/* Configuration Summary */}
@@ -2284,14 +2286,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
             <span style={{ fontWeight: '500', color: '#374151' }}>Cores:</span>
             <span style={{ marginLeft: '8px', color: '#6b7280' }}>{numCores}</span>
           </div>
-          <div>
-            <span style={{ fontWeight: '500', color: '#374151' }}>Max Partitions:</span>
-            <span style={{ marginLeft: '8px', color: '#6b7280' }}>{maxPart}</span>
-          </div>
-          <div>
-            <span style={{ fontWeight: '500', color: '#374151' }}>Max Bandwidth:</span>
-            <span style={{ marginLeft: '8px', color: '#6b7280' }}>{maxBandwidth} MB/s</span>
-          </div>
+          
         </div>
       </div>
 

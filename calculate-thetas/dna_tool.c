@@ -1,3 +1,5 @@
+//dna_tool.c
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
