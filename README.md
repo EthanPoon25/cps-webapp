@@ -11,8 +11,8 @@ This application removes the need for manually running multiple Python and C scr
 ### 1. Algorithm Selection
 The app allows the user to select the algorithm that drives the preprocessing step:
 
-- **RASCO** – Resource-Aware Scheduling & Clustering Optimization  
-- **DNA** – Dynamic Nonlinear Approximation ([read the paper](https://www.cis.upenn.edu/~linhphan/papers/rtas21-dna.pdf))  
+- **RASCO** – Resource Allocation and Scheduling Co-design for DAG Applications on Multicore
+- **DNA** – DNA: Dynamic Resource Allocation for Soft Real-Time Multicore Systems ([read the paper](https://www.cis.upenn.edu/~linhphan/papers/rtas21-dna.pdf))  
 
 **How it works:**  
 The chosen algorithm affects how benchmark profile data is clustered into phases. These phases summarize the typical execution patterns of a benchmark under varying cache and memory bandwidth configurations. Choosing between RASCO and DNA allows users to tailor the analysis to their research needs, as each algorithm emphasizes different aspects of task execution variability and resource usage.
