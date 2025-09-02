@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Upload, CheckCircle, FileText, Cpu, Database, Activity, ChevronRight, ChevronLeft, FolderOpen } from 'lucide-react';
+import { Upload, CheckCircle, FileText, Cpu, Database, Activity, ChevronRight, ChevronLeft, FolderOpen, Hash } from 'lucide-react';
 import JSZip from 'jszip';
 import {Settings, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Zap } from 'lucide-react'; // or whichever library you’re using
@@ -306,6 +306,24 @@ function ResourceTypesPage({ config, updateConfig }) {
     .catch(error => console.error('Error updating min partitions:', error));
   };
 
+  const setConfig = (e) => {
+    let val = parseInt(e.target.value);
+    if (val < 1) val = 1;
+    // You can add a max limit if needed, e.g., if (val > 100) val = 100;
+    
+    updateConfig({ ...config, numPerConfig: val });
+    
+    // Optional: Send to backend
+    fetch('/update-num-per-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numPerConfig: val })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Num per config updated:', data))
+    .catch(error => console.error('Error updating num per config:', error));
+  };
+
   const handleMaxBandwidthChange = (e) => {
     let val = parseInt(e.target.value);
     if (isNaN(val)) val = 1;
@@ -329,6 +347,14 @@ function ResourceTypesPage({ config, updateConfig }) {
     .then(response => response.json())
     .then(data => console.log('Max bandwidth updated:', data))
     .catch(error => console.error('Error updating max bandwidth:', error));
+  };
+
+  const handleNumPerConfigChange = (e) => {
+    const value = parseInt(e.target.value) || 1;
+    setConfig(prev => ({
+      ...prev,
+      numPerConfig: value
+    }));
   };
 
   const handleMinBandwidthChange = (e) => {
@@ -480,7 +506,7 @@ function ResourceTypesPage({ config, updateConfig }) {
                 type="number"
                 min="1"
                 max="21"
-                value={config.maxPart || 1}
+                value={config.maxPart || null}
                 onChange={handleMaxPartChange}
                 style={{
                   width: '100%',
@@ -571,7 +597,7 @@ function ResourceTypesPage({ config, updateConfig }) {
                 min="1"
                 max="21"
                 step="1"
-                value={config.maxBandwidth || 1}
+                value={config.maxBandwidth || null}
                 onChange={handleMaxBandwidthChange}
                 style={{
                   width: '100%',
@@ -596,8 +622,60 @@ function ResourceTypesPage({ config, updateConfig }) {
       </div>
 
       {/* Resource Types Selection */}
-      
-    </div>
+      <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '24px',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0'
+        }}>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Hash style={{ width: '20px', height: '20px', marginRight: '8px', color: '#2563eb' }} />
+            Number Per Configuration
+          </h3>
+          
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151',
+              display: 'block',
+              marginBottom: '8px'
+            }}>
+              Instances Per Config
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={config.numPerConfig || 1}
+              onChange={handleNumPerConfigChange}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '16px',
+                backgroundColor: 'white'
+              }}
+            />
+          </div>
+          
+          <p style={{
+            fontSize: '13px',
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            Number of instances to run per configuration: {config.numPerConfig || 1}
+          </p>
+        </div>
+      </div>
   );
 }
 

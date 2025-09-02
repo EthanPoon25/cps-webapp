@@ -100,6 +100,7 @@ git clone https://github.com/EthanPoon25/cps-webapp.git
 cd cps-webapp
 npm install
 npm install react@19.1.0 react-dom@19.1.0 react-scripts@5.0.1 --save
+pip install -r requirements.txt
 
 ``````
 #### Run npm run dev on your command line (to run the backend first)
