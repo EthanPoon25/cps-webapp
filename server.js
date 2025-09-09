@@ -650,7 +650,8 @@ async function processUploadedFilesOptimized(files, taskName) {
 
 async function compileOnceIfNeeded() {
   const buildDir = path.join(__dirname, 'calculate-thetas');
-  const exePath = path.join(__dirname, 'dna_tool.exe');
+  const isWindows = process.platform === 'win32';
+  const exePath = isWindows ? path.join(__dirname, 'dna_tool.exe') : path.join(__dirname, 'dna_tool');
   const sourcePath = path.join(buildDir, 'dna_tool.c');
   
   if (!fs.existsSync(buildDir) || !fs.existsSync(sourcePath)) {
