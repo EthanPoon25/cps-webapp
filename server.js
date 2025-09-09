@@ -18,6 +18,7 @@ let minPartnum = 1;    // default values
 let maxPartnum = 21;
 let minBandnum = 1;
 let maxBandnum = 21;
+let numPerConfig = 100;
 
 app.use(cors());
 app.use(express.json());
@@ -295,24 +296,25 @@ app.use('/api/send-data', (req, res, next) => {
 });
 
 app.post('/api/send-data', (req, res) => {
-  const { minPart, maxPart, minBandwidth, maxBandwidth } = req.body;
+  let { minPart, maxPart, minBandwidth, maxBandwidth, numPerConfig: receivedNumPerConfig } = req.body;
   
   // Log the received data
-  console.log('Received data from frontend:', { minPart, maxPart, minBandwidth, maxBandwidth });
+  console.log('Received data from frontend:', { minPart, maxPart, minBandwidth, maxBandwidth, numPerConfig: receivedNumPerConfig });
 
   // Update the global variables (these are declared at the top of your file)
   if (minPart !== undefined) minPartnum = parseInt(minPart);
   if (maxPart !== undefined) maxPartnum = parseInt(maxPart);
   if (minBandwidth !== undefined) minBandnum = parseInt(minBandwidth);
   if (maxBandwidth !== undefined) maxBandnum = parseInt(maxBandwidth);
+  if (receivedNumPerConfig !== undefined) numPerConfig = parseInt(receivedNumPerConfig); // Fix: Update global variable
 
-  console.log('Updated global variables:', { minPartnum, maxPartnum, minBandnum, maxBandnum });
+  console.log('Updated global variables:', { minPartnum, maxPartnum, minBandnum, maxBandnum, numPerConfig});
 
   // Respond with confirmation
   res.json({ 
     message: 'Data received and updated successfully', 
-    received: { minPart, maxPart, minBandwidth, maxBandwidth },
-    updated: { minPartnum, maxPartnum, minBandnum, maxBandnum }
+    received: { minPart, maxPart, minBandwidth, maxBandwidth, numPerConfig: receivedNumPerConfig },
+    updated: { minPartnum, maxPartnum, minBandnum, maxBandnum, numPerConfig }
   });
 });
 
@@ -334,6 +336,21 @@ app.post('/update-bw', (req, res) => {
     res.status(400).send({ error: 'Invalid value' });
   }
 });
+
+app.post('/update-num-per-config', (req, res) => {
+  const { numPerConfig: val } = req.body;
+  
+  if (typeof val === 'number' && val >= 1 && val <= 20) {
+    numPerConfig = val; // make sure numPerConfig is declared with let at the top of server.js
+    console.log('numPerConfig updated to:', numPerConfig);
+    res.status(200).send({ success: true });
+  } else {
+    console.log('Invalid numPerConfig value:', val);
+    res.status(400).send({ error: 'Invalid value' });
+  }
+});
+
+
 
 
 // Get CPU frequency
@@ -377,6 +394,7 @@ app.post('/api/generate-tasks', (req, res) => {
     const coresNum = parseInt(cores);
     const maxPartnum = parseInt(maxPart);
     const maxBandnum = parseInt(maxBandwidth);
+    const numPerConfig = parseInt(numPerConfig);
     
     if (isNaN(targetUtilNum) || isNaN(minWithinNum) || isNaN(maxWithinNum) || 
         isNaN(coresNum) || isNaN(maxPartnum)) {
@@ -997,14 +1015,14 @@ async function createZipFileOptimized(taskName) {
 // Main processing route - simplified
 app.post('/api/process', upload.array('files', 50), async (req, res) => {
   const files = req.files;
-  const { task, clusters, perConfig } = req.body;
-
-  if (!files || !task || !clusters || !perConfig) {
+  const { task, clusters} = req.body;
+  console.log(numPerConfig,"here")
+  if (!files || !task || !clusters ) {
     return res.status(400).json({ success: false, error: 'Missing required fields or files.' });
   }
 
   console.log('=== PROCESSING STARTED ===');
-  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${perConfig}, MinPart: ${minPartnum}, MaxPart: ${maxPartnum}, MinBand: ${minBandnum}, MaxBand: ${maxBandnum}`);
+  console.log(`Task: ${task}, Files: ${files.length}, Clusters: ${clusters}, PerConfig: ${numPerConfig}, MinPart: ${minPartnum}, MaxPart: ${maxPartnum}, MinBand: ${minBandnum}, MaxBand: ${maxBandnum}`);
 
   try {
     // Step 1: Process files
@@ -1016,7 +1034,7 @@ app.post('/api/process', upload.array('files', 50), async (req, res) => {
     // Step 2: Python clustering
     console.log('Step 2: Running Python clustering...');
     
-    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${perConfig} --minpart ${minPartnum} --maxpart ${maxPartnum} --minband ${minBandnum } --maxband ${maxBandnum} --scan-input`;
+    const pythonCommand = `python dna-phase-clustering.py --task ${task} --input-dir ${path.join('./input-data',task)} --output-dir output-phases --num-clusters ${clusters} --num-per-config ${numPerConfig} --minpart ${minPartnum} --maxpart ${maxPartnum} --minband ${minBandnum } --maxband ${maxBandnum} --scan-input`;
     
     const { stdout, stderr } = await execAsync(pythonCommand, {
       maxBuffer: 1024 * 1024 * 10 // Increased buffer size to 10MB

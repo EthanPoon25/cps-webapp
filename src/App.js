@@ -306,24 +306,6 @@ function ResourceTypesPage({ config, updateConfig }) {
     .catch(error => console.error('Error updating min partitions:', error));
   };
 
-  const setConfig = (e) => {
-    let val = parseInt(e.target.value);
-    if (val < 1) val = 1;
-    // You can add a max limit if needed, e.g., if (val > 100) val = 100;
-    
-    updateConfig({ ...config, numPerConfig: val });
-    
-    // Optional: Send to backend
-    fetch('/update-num-per-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ numPerConfig: val })
-    })
-    .then(response => response.json())
-    .then(data => console.log('Num per config updated:', data))
-    .catch(error => console.error('Error updating num per config:', error));
-  };
-
   const handleMaxBandwidthChange = (e) => {
     let val = parseInt(e.target.value);
     if (isNaN(val)) val = 1;
@@ -349,13 +331,26 @@ function ResourceTypesPage({ config, updateConfig }) {
     .catch(error => console.error('Error updating max bandwidth:', error));
   };
 
-  const handleNumPerConfigChange = (e) => {
-    const value = parseInt(e.target.value) || 1;
-    setConfig(prev => ({
-      ...prev,
-      numPerConfig: value
-    }));
+  const handleNumPerConfigChange  = (e) => {
+    let val = parseInt(e.target.value);
+
+    if (isNaN(val)) val = 1;
+    if (val < 1) val = 1;
+    if (val > 10000) val = 10000; // Adjustable max limit
+
+    updateConfig({ ...config, numPerConfig: val });
+
+    // Optional: Send to backend
+    fetch('/update-num-per-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numPerConfig: val })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Num per config updated:', data))
+    .catch(error => console.error('Error updating num per config:', error));
   };
+
 
   const handleMinBandwidthChange = (e) => {
     let val = parseInt(e.target.value);
@@ -390,7 +385,7 @@ function ResourceTypesPage({ config, updateConfig }) {
       maxPart: config.maxPart,
       minBandwidth: config.minBandwidth,
       maxBandwidth: config.maxBandwidth,
-      
+      numPerConfig: config.numPerConfig,
     };
   fetch('http://localhost:3001/api/send-data', {   // point to your backend
     method: 'POST',
@@ -413,7 +408,7 @@ function ResourceTypesPage({ config, updateConfig }) {
     config.maxPart,
     config.minBandwidth,
     config.maxBandwidth,
-    
+    config.numPerConfig,
   ]);
 
   return (
@@ -1152,7 +1147,6 @@ const processCurrentTask = async () => {
   formData.append('task', taskName.trim());
   formData.append('phases', phases.trim());
   formData.append('clusters', clusternum.trim());
-  formData.append('perConfig', '100');
 
   // Add current configuration settings
   if (config.phaseDetection) {
@@ -1244,7 +1238,6 @@ const processBatchTasks = async () => {
         formData.append('task', task.name);
         formData.append('phases', task.phases);
         formData.append('clusters', task.clusters);
-        formData.append('perConfig', '100');
 
         // Add task-specific configuration
         if (task.phaseDetection) {
@@ -1387,6 +1380,7 @@ const processBatchTasks = async () => {
     setTaskName(task.name);
     setPhases(task.phases);
     setClusternum(task.clusters);
+    
     // Note: We can't restore the actual files, only show the metadata
     alert(`Task "${task.name}" settings loaded. Please re-upload the files to process.`);
   };
@@ -2036,6 +2030,7 @@ function TasksetGenerationPage({ config, updateConfig }) {
         taskName: taskName,
         maxPart: parseInt(config.maxPart) || 1,
         maxBandwidth: parseInt(config.maxBandwidth) || 1,
+        numPerConfig: parseInt(config.numPerConfig) || 100,
         exportFormat: ['csv', 'txt'] // Export both formats
       };
 
